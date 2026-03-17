@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CoreDFeMonitor.Application/CoreDFeMonitor.Application.csproj" />
+    <Project Path="src/CoreDFeMonitor.Core/CoreDFeMonitor.Core.csproj" />
+    <Project Path="src/CoreDFeMonitor.Infrastructure/CoreDFeMonitor.Infrastructure.csproj" />
+    <Project Path="src/CoreDFeMonitor.UI/CoreDFeMonitor.UI.csproj" />
+    <Project Path="src/CoreDFeMonitor.Worker/CoreDFeMonitor.Worker.csproj" />
+  </Folder>
+</Solution>

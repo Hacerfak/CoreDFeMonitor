@@ -1,0 +1,41 @@
+# Crie este arquivo como: .gitignore
+
+# Pastas de Build e Cache do .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.ionide/
+
+# Arquivos do Rider / Resharper
+.idea/
+
+# Arquivos do SO
+.DS_Store
+Thumbs.db
+
+# Logs e arquivos de teste
+*.log
+TestResults/
+
+# Banco de Dados SQLite (Ignorar local db)
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Certificados locais (Segurança: Não commitar certificados!)
+*.pfx
+*.p12
+*.cer
+*.crt
+
+# AppSettings locais
+appsettings.Development.json
+appsettings.Local.json

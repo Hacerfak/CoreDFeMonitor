@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-CoreDFeMonitor.Worker-aba1b06f-a0ef-4e28-84e1-a199112b36b6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreDFeMonitor.Application\CoreDFeMonitor.Application.csproj" />
+    <ProjectReference Include="..\CoreDFeMonitor.Core\CoreDFeMonitor.Core.csproj" />
+    <ProjectReference Include="..\CoreDFeMonitor.Infrastructure\CoreDFeMonitor.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
