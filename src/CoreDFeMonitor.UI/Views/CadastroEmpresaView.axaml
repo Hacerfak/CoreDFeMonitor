@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    x:Class="CoreDFeMonitor.UI.Views.CadastroEmpresaView"
+    x:DataType="vm:CadastroEmpresaViewModel">
+
+    <StackPanel Margin="20" Spacing="15" Width="400">
+        <TextBlock Text="Cadastro de Empresa" FontSize="24" FontWeight="Bold" />
+
+        <TextBox Text="{Binding Cnpj}" Watermark="CNPJ (Somente Números)" />
+        <TextBox Text="{Binding RazaoSocial}" Watermark="Razão Social" />
+        <TextBox Text="{Binding Uf}" Watermark="UF (Ex: SP)" MaxLength="2" />
+
+        <Grid ColumnDefinitions="*, Auto">
+            <TextBox Grid.Column="0" Text="{Binding CaminhoCertificado}"
+                Watermark="Caminho do Certificado (.pfx)" IsReadOnly="True" />
+            <Button Grid.Column="1" Content="Buscar"
+                Command="{Binding SelecionarCertificadoCommand}" Margin="5,0,0,0" />
+        </Grid>
+
+        <TextBox Text="{Binding SenhaCertificado}" Watermark="Senha do Certificado" PasswordChar="*" />
+
+        <Button Content="Salvar e Validar Certificado"
+            Command="{Binding SalvarEmpresaCommand}"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Center" />
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCarregando}" Margin="0,10" />
+
+        <TextBlock Text="{Binding MensagemStatus}"
+            TextWrapping="Wrap"
+            Foreground="DarkBlue"
+            FontWeight="SemiBold" />
+    </StackPanel>
+</UserControl>
