@@ -28,7 +28,11 @@ namespace CoreDFeMonitor.UI
                 // 2. Configuração do Container de Injeção de Dependências
                 var services = new ServiceCollection();
 
-                services.AddLogging();        // Adiciona Logging
+                services.AddLogging(builder =>
+                {
+                    builder.AddConsole(); // Imprime no terminal
+                    builder.SetMinimumLevel(LogLevel.Information);
+                });        // Adiciona Logging
 
                 services.AddInfrastructure(); // Adiciona EF Core SQLite e Zeus Fiscal
                 services.AddApplication();    // Adiciona o MediatR

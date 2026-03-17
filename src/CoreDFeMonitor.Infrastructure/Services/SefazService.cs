@@ -7,17 +7,22 @@ using DFe.Classes.Flags;
 using DFe.Utils;
 using NFe.Utils;
 using NFe.Servicos;
+using NFe.Classes.Informacoes.Identificacao.Tipos;
+using NFe.Classes.Servicos.ConsultaCadastro;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 namespace CoreDFeMonitor.Infrastructure.Services
 {
     public class SefazService : ISefazService
     {
         private readonly ICertificadoService _certificadoService;
+        private readonly ILogger<SefazService> _logger; // <--- Logger
 
-        public SefazService(ICertificadoService certificadoService)
+        public SefazService(ICertificadoService certificadoService, ILogger<SefazService> logger)
         {
             _certificadoService = certificadoService;
+            _logger = logger;
         }
 
         internal ConfiguracaoServico CriarConfiguracaoZeus(Empresa empresa)
@@ -81,28 +86,33 @@ namespace CoreDFeMonitor.Infrastructure.Services
             }
         }
 
-        // src/CoreDFeMonitor.Infrastructure/Services/SefazService.cs
-
         public async Task<SefazCadastroResult> ConsultarCadastroAsync(string uf, string caminhoCertificado, string senha)
         {
-            // 1. Declaramos as variáveis FORA do try para o catch as poder usar
             string cnpjBase = string.Empty;
             string razaoBase = string.Empty;
 
             try
             {
-                // 2. Extração dos dados do certificado
+                _logger.LogInformation("--- INICIANDO CONSULTA SEFAZ ---");
+
                 var cert = _certificadoService.ObterCertificadoDoArquivo(caminhoCertificado, senha);
                 var subject = cert.Subject;
+                _logger.LogInformation("Certificado carregado. Subject bruto: {Subject}", subject);
 
+                // Extração melhorada (Lida com vírgulas e formatações diferentes)
                 var cnpjMatch = Regex.Match(subject, @"([0-9]{14})");
                 cnpjBase = cnpjMatch.Success ? cnpjMatch.Groups[1].Value : "";
+                _logger.LogInformation("CNPJ extraído do certificado: '{Cnpj}'", cnpjBase);
 
-                var razaoMatch = Regex.Match(subject, @"CN=([^:]+)");
+                var razaoMatch = Regex.Match(subject, @"CN=([^:,]+)");
                 razaoBase = razaoMatch.Success ? razaoMatch.Groups[1].Value.Trim() : "Razão Social Não Identificada";
+                _logger.LogInformation("Razão Social extraída do certificado: '{Razao}'", razaoBase);
 
                 if (string.IsNullOrEmpty(cnpjBase))
+                {
+                    _logger.LogWarning("FALHA: Não foi possível encontrar 14 números no Subject do Certificado.");
                     return new SefazCadastroResult(false, "", "", null, null, null, null, null, null, null, null, "Não foi possível extrair o CNPJ do Certificado.");
+                }
 
                 var configCertificado = new DFe.Utils.ConfiguracaoCertificado()
                 {
@@ -113,73 +123,64 @@ namespace CoreDFeMonitor.Infrastructure.Services
                     DigestMethodReference = "http://www.w3.org/2000/09/xmldsig#sha1"
                 };
 
-                if (!Enum.TryParse(uf.ToUpper(), out DFe.Classes.Entidades.Estado estadoSefaz))
+                if (!Enum.TryParse(uf.ToUpper(), out Estado estadoSefaz))
                     return new SefazCadastroResult(false, cnpjBase, razaoBase, null, null, null, null, null, null, null, null, "UF inválida.");
 
                 var configTemp = new NFe.Utils.ConfiguracaoServico
                 {
                     tpAmb = DFe.Classes.Flags.TipoAmbiente.Producao,
+                    tpEmis = TipoEmissao.teNormal,
                     cUF = estadoSefaz,
                     ModeloDocumento = DFe.Classes.Flags.ModeloDocumento.NFe,
                     Certificado = configCertificado,
                     TimeOut = 20000,
-                    ValidarSchemas = false, // Desligado para evitar erro da v4.00 na Sefaz
+                    ValidarSchemas = false,
                     DefineVersaoServicosAutomaticamente = false,
                     VersaoNfeConsultaCadastro = DFe.Classes.Flags.VersaoServico.Versao400,
                     VersaoLayout = DFe.Classes.Flags.VersaoServico.Versao400
                 };
 
                 using var servicoNfe = new ServicosNFe(configTemp);
-                var retornoSefaz = servicoNfe.NfeConsultaCadastro(uf.ToUpper(), NFe.Classes.Servicos.ConsultaCadastro.ConsultaCadastroTipoDocumento.Cnpj, cnpjBase);
+
+                _logger.LogInformation("Enviando requisição WSDL para a SEFAZ de {UF}...", estadoSefaz);
+                var retornoSefaz = servicoNfe.NfeConsultaCadastro(uf.ToUpper(), ConsultaCadastroTipoDocumento.Cnpj, cnpjBase);
+
+                _logger.LogInformation("Resposta da SEFAZ recebida. cStat: {cStat} | xMotivo: {xMotivo}",
+                    retornoSefaz?.Retorno?.infCons?.cStat,
+                    retornoSefaz?.Retorno?.infCons?.xMotivo);
 
                 if (retornoSefaz?.Retorno?.infCons?.infCad != null)
                 {
+                    _logger.LogInformation("Dados de endereço (infCad) retornados pela Sefaz com sucesso!");
                     var dados = retornoSefaz.Retorno.infCons.infCad;
                     var ender = dados.ender;
 
                     long? codigoIbge = null;
                     if (ender != null && !string.IsNullOrWhiteSpace(ender.cMun) && long.TryParse(ender.cMun, out var ibgeParsed))
-                    {
                         codigoIbge = ibgeParsed;
-                    }
 
                     return new SefazCadastroResult(
-                        true,
-                        cnpjBase,
-                        dados.xNome ?? razaoBase,
-                        dados.IE,
-                        ender?.xLgr,
-                        ender?.nro,
-                        ender?.xCpl,
-                        ender?.xBairro,
-                        codigoIbge,
-                        ender?.xMun,
-                        ender?.CEP,
-                        string.Empty
+                        true, cnpjBase, dados.xNome ?? razaoBase, dados.IE, ender?.xLgr, ender?.nro,
+                        ender?.xCpl, ender?.xBairro, codigoIbge, ender?.xMun, ender?.CEP, string.Empty
                     );
                 }
 
+                _logger.LogWarning("Sefaz respondeu positivamente, mas sem dados de cadastro (infCad vazio).");
                 return new SefazCadastroResult(
                     true, cnpjBase, razaoBase, null, null, null, null, null, null, null, null,
-                    "Sucesso parcial: A Sefaz consultada não retornou os dados completos de endereço."
+                    "Sucesso parcial: A Sefaz não retornou os dados de endereço."
                 );
             }
             catch (Exception ex)
             {
-                // Se o CNPJ for vazio aqui, significa que o erro ocorreu ANTES de consultar a Sefaz 
-                // (ex: senha incorreta ou arquivo PFX corrompido). Portanto, bloqueamos.
-                if (string.IsNullOrEmpty(cnpjBase))
-                {
-                    return new SefazCadastroResult(false, "", "", null, null, null, null, null, null, null, null, $"Erro ao ler o certificado (verifique a senha): {ex.Message}");
-                }
+                _logger.LogError(ex, "EXCEÇÃO CAPTURADA: {Message}", ex.Message);
 
-                // Se o CNPJ foi preenchido, o certificado é válido e o erro foi de conexão com a Sefaz. Avançamos!
+                if (string.IsNullOrEmpty(cnpjBase))
+                    return new SefazCadastroResult(false, "", "", null, null, null, null, null, null, null, null, $"Erro ao ler o certificado (verifique a senha): {ex.Message}");
+
                 return new SefazCadastroResult(
-                    true,
-                    cnpjBase,
-                    razaoBase,
-                    null, null, null, null, null, null, null, null,
-                    $"Aviso: A SEFAZ ({uf}) está indisponível ou rejeitou a consulta ({ex.Message}). Pode prosseguir preenchendo os dados manualmente."
+                    true, cnpjBase, razaoBase, null, null, null, null, null, null, null, null,
+                    $"AVISO SEFAZ: {ex.Message}. (Avançando apenas com os dados do Certificado)" // <-- Isto vai aparecer na UI
                 );
             }
         }
