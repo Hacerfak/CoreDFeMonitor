@@ -1,18 +1,17 @@
 // src/CoreDFeMonitor.UI/App.axaml.cs
-using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using CoreDFeMonitor.Application;
 using CoreDFeMonitor.Infrastructure;
 using CoreDFeMonitor.Infrastructure.Data;
 using CoreDFeMonitor.UI.ViewModels;
-using CoreDFeMonitor.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Avalonia.Platform.Storage;
 
 namespace CoreDFeMonitor.UI
 {
-    public partial class App : Application
+    public partial class App : Avalonia.Application
     {
         public override void Initialize()
         {
@@ -28,6 +27,8 @@ namespace CoreDFeMonitor.UI
 
                 // 2. Configuração do Container de Injeção de Dependências
                 var services = new ServiceCollection();
+
+                services.AddLogging();        // Adiciona Logging
 
                 services.AddInfrastructure(); // Adiciona EF Core SQLite e Zeus Fiscal
                 services.AddApplication();    // Adiciona o MediatR

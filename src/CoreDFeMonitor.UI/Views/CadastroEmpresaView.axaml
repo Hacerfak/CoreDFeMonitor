@@ -1,35 +1,195 @@
 <UserControl xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     x:Class="CoreDFeMonitor.UI.Views.CadastroEmpresaView"
-    x:DataType="vm:CadastroEmpresaViewModel">
+    x:DataType="vm:CadastroEmpresaViewModel"
+    Background="#F4F6F8">
 
-    <StackPanel Margin="20" Spacing="15" Width="400">
-        <TextBlock Text="Cadastro de Empresa" FontSize="24" FontWeight="Bold" />
+    <Grid>
+        <Border Background="#CCFFFFFF" ZIndex="100" IsVisible="{Binding IsCarregando}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="6" Foreground="#673AB7" />
+                <TextBlock Text="{Binding MensagemStatus}" FontSize="18" FontWeight="SemiBold"
+                    Foreground="#333333" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
-        <TextBox Text="{Binding Cnpj}" Watermark="CNPJ (Somente Números)" />
-        <TextBox Text="{Binding RazaoSocial}" Watermark="Razão Social" />
-        <TextBox Text="{Binding Uf}" Watermark="UF (Ex: SP)" MaxLength="2" />
+        <ScrollViewer>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24"
+                Margin="20" MaxWidth="650">
 
-        <Grid ColumnDefinitions="*, Auto">
-            <TextBox Grid.Column="0" Text="{Binding CaminhoCertificado}"
-                Watermark="Caminho do Certificado (.pfx)" IsReadOnly="True" />
-            <Button Grid.Column="1" Content="Buscar"
-                Command="{Binding SelecionarCertificadoCommand}" Margin="5,0,0,0" />
-        </Grid>
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <icons:MaterialIcon Kind="DomainPlus" Width="64" Height="64"
+                        Foreground="#673AB7" HorizontalAlignment="Center" />
+                    <TextBlock Text="Cadastrar Empresa" FontSize="32" FontWeight="Light"
+                        Foreground="#222222" HorizontalAlignment="Center" />
+                    <TextBlock Text="Monitor de DF-es conectado com a SEFAZ" FontSize="16"
+                        Foreground="Gray" HorizontalAlignment="Center" />
+                </StackPanel>
 
-        <TextBox Text="{Binding SenhaCertificado}" Watermark="Senha do Certificado" PasswordChar="*" />
+                <Border Background="#FFEBEE" BorderBrush="#FF9800" BorderThickness="1"
+                    CornerRadius="8" Padding="16"
+                    IsVisible="{Binding MensagemStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <icons:MaterialIcon Kind="AlertOutline" Foreground="#E65100" Width="24"
+                            Height="24" />
+                        <TextBlock Text="{Binding MensagemStatus}" Foreground="#E65100"
+                            VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
 
-        <Button Content="Salvar e Validar Certificado"
-            Command="{Binding SalvarEmpresaCommand}"
-            HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Center" />
+                <Border IsVisible="{Binding !IsFaseRevisao}" Background="White" CornerRadius="12"
+                    Padding="40" BoxShadow="0 10 30 0 #1A000000">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="1. Certificado e UF" FontSize="20" FontWeight="SemiBold"
+                            Foreground="#333333" />
+                        <TextBlock
+                            Text="Selecione o arquivo PFX do certificado A1. O sistema fará a leitura automática na SEFAZ."
+                            Foreground="Gray" TextWrapping="Wrap" Margin="0,-10,0,10" />
 
-        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCarregando}" Margin="0,10" />
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="Caminho do Arquivo (.pfx)" FontWeight="SemiBold"
+                                Foreground="#555555" FontSize="13" />
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBox Grid.Column="0" Text="{Binding CaminhoCertificado}"
+                                    Watermark="Nenhum arquivo selecionado..." IsReadOnly="True" />
+                                <Button Grid.Column="1"
+                                    Command="{Binding SelecionarCertificadoCommand}"
+                                    Background="#E0E0E0" Margin="8,0,0,0"
+                                    ToolTip.Tip="Procurar arquivo">
+                                    <icons:MaterialIcon Kind="FolderOpen" Foreground="#673AB7"
+                                        Width="20" Height="20" />
+                                </Button>
+                            </Grid>
+                        </StackPanel>
 
-        <TextBlock Text="{Binding MensagemStatus}"
-            TextWrapping="Wrap"
-            Foreground="DarkBlue"
-            FontWeight="SemiBold" />
-    </StackPanel>
+                        <Grid ColumnDefinitions="*, 20, 150">
+                            <StackPanel Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Senha do Certificado" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding SenhaCertificado}" PasswordChar="•"
+                                    Watermark="Digite a senha..." />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="UF Emissora" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <ComboBox ItemsSource="{Binding ListaUFs}"
+                                    SelectedItem="{Binding Uf}" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Button Content="Avançar e Consultar SEFAZ"
+                            Command="{Binding ConsultarSefazCommand}"
+                            Background="#673AB7" Foreground="White"
+                            HorizontalAlignment="Right" Padding="24,12" CornerRadius="24"
+                            Margin="0,20,0,0" FontSize="16" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+
+                <Border IsVisible="{Binding IsFaseRevisao}" Background="White" CornerRadius="12"
+                    Padding="40" BoxShadow="0 10 30 0 #1A000000">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="2. Revisão de Dados" FontSize="20" FontWeight="SemiBold"
+                            Foreground="#333333" />
+                        <TextBlock
+                            Text="Dados retornados da SEFAZ. Verifique os dados e informe os contatos."
+                            Foreground="Gray" TextWrapping="Wrap" Margin="0,-10,0,10" />
+
+                        <Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto, 15, Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5">
+                                <TextBlock Text="CNPJ" FontWeight="SemiBold" Foreground="#555555"
+                                    FontSize="13" />
+                                <TextBox Text="{Binding Cnpj}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5">
+                                <TextBlock Text="Inscrição Estadual" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding InscricaoEstadual}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Spacing="5">
+                                <TextBlock Text="Razão Social" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding RazaoSocial}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto, 10, Auto, 10, Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Logradouro" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding Logradouro}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5">
+                                <TextBlock Text="Número" FontWeight="SemiBold" Foreground="#555555"
+                                    FontSize="13" />
+                                <TextBox Text="{Binding Numero}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Bairro" FontWeight="SemiBold" Foreground="#555555"
+                                    FontSize="13" />
+                                <TextBox Text="{Binding Bairro}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="2" Spacing="5">
+                                <TextBlock Text="CEP" FontWeight="SemiBold" Foreground="#555555"
+                                    FontSize="13" />
+                                <TextBox Text="{Binding Cep}" IsReadOnly="True" Background="#F0F0F0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="4" Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Município" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding NomeMunicipio}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="4" Grid.Column="2" Spacing="5">
+                                <TextBlock Text="Cód. IBGE" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding CodigoMunicipio}" IsReadOnly="True"
+                                    Background="#F0F0F0" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="#EEEEEE" Margin="0,5" />
+
+                        <Grid ColumnDefinitions="*, 15, *" RowDefinitions="Auto">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5">
+                                <TextBlock Text="Telefone" FontWeight="SemiBold"
+                                    Foreground="#555555" FontSize="13" />
+                                <TextBox Text="{Binding Telefone}" Watermark="(00) 00000-0000" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5">
+                                <TextBlock Text="E-mail" FontWeight="SemiBold" Foreground="#555555"
+                                    FontSize="13" />
+                                <TextBox Text="{Binding Email}" Watermark="contato@empresa.com" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="Auto, *, Auto" Margin="0, 20, 0, 0">
+                            <Button Grid.Column="0" Content="Voltar"
+                                Command="{Binding VoltarFase1Command}" Background="Transparent"
+                                Foreground="Gray" Padding="20,12" FontWeight="SemiBold" />
+
+                            <Button Grid.Column="2" Content="Salvar Empresa e Concluir"
+                                Command="{Binding SalvarEmpresaCommand}"
+                                Background="#4CAF50" Foreground="White"
+                                Padding="24,12" CornerRadius="24" FontSize="16"
+                                FontWeight="SemiBold" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

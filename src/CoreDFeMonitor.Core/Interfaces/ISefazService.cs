@@ -4,12 +4,24 @@ using CoreDFeMonitor.Core.Entities;
 
 namespace CoreDFeMonitor.Core.Interfaces
 {
+    public record SefazCadastroResult(
+        bool Sucesso,
+        string Cnpj,
+        string RazaoSocial,
+        string? InscricaoEstadual,
+        string? Logradouro,
+        string? Numero,
+        string? Complemento,
+        string? Bairro,
+        long? CodigoMunicipio,
+        string? NomeMunicipio,
+        string? Cep,
+        string MensagemErro
+    );
+
     public interface ISefazService
     {
-        // Aqui adicionaremos os métodos de Distribuição e Manifestação futuramente
-        // Exemplo: Task<RetornoDistribuicao> ConsultarDFeAsync(Empresa empresa, string nsu);
-
-        // Valida se a configuração e o certificado da empresa estão prontos para uso
         bool ValidarConfiguracao(Empresa empresa);
+        Task<SefazCadastroResult> ConsultarCadastroAsync(string uf, string caminhoCertificado, string senha);
     }
 }

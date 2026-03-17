@@ -42,6 +42,16 @@ namespace CoreDFeMonitor.Infrastructure.Data
 
                 entity.Property(e => e.SenhaCertificado)
                       .HasMaxLength(200);
+                entity.Property(e => e.InscricaoEstadual).HasMaxLength(20);
+                entity.Property(e => e.Logradouro).HasMaxLength(200);
+                entity.Property(e => e.Numero).HasMaxLength(20);
+                entity.Property(e => e.Complemento).HasMaxLength(100);
+                entity.Property(e => e.Bairro).HasMaxLength(100);
+                entity.Property(e => e.NomeMunicipio).HasMaxLength(150);
+                entity.Property(e => e.Cep).HasMaxLength(10);
+                entity.Property(e => e.Telefone).HasMaxLength(20);
+                entity.Property(e => e.Email).HasMaxLength(150);
+                entity.Property(e => e.DataCadastro);
             });
         }
     }

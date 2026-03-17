@@ -29,7 +29,11 @@ namespace CoreDFeMonitor.Application.Features.Empresas.Commands
                     return (false, "Já existe uma empresa cadastrada com este CNPJ.");
 
                 // 2. Criar a Entidade (O construtor já valida CNPJ e UF)
-                var empresa = new Empresa(request.Cnpj, request.RazaoSocial, request.Uf);
+                var empresa = new Empresa(
+                    request.Cnpj, request.RazaoSocial, request.Uf, request.InscricaoEstadual,
+                    request.Logradouro, request.Numero, request.Complemento, request.Bairro,
+                    request.CodigoMunicipio, request.NomeMunicipio, request.Cep,
+                    request.Telefone, request.Email);
 
                 // 3. Configurar Certificado
                 empresa.ConfigurarCertificado(request.CaminhoCertificado, request.SenhaCertificado);
