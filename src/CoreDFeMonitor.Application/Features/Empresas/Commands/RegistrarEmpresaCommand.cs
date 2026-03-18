@@ -1,5 +1,4 @@
-// src/CoreDFeMonitor.Application/Features/Empresas/Commands/RegistrarEmpresaCommand.cs
-using MediatR;
+using CoreDFeMonitor.Core.Mediator;
 
 namespace CoreDFeMonitor.Application.Features.Empresas.Commands
 {

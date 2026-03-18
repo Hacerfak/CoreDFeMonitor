@@ -1,10 +1,9 @@
-// src/CoreDFeMonitor.UI/ViewModels/CadastroEmpresaViewModel.cs
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CoreDFeMonitor.Application.Features.Empresas.Commands;
 using CoreDFeMonitor.Core.Interfaces;
-using MediatR;
+using CoreDFeMonitor.Core.Mediator;
 using Avalonia.Platform.Storage;
 using Avalonia.Controls.ApplicationLifetimes;
 

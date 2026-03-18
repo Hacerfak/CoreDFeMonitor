@@ -21,7 +21,6 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Material.Icons.Avalonia" Version="3.0.0" />
-    <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
@@ -30,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CoreDFeMonitor.Application\CoreDFeMonitor.Application.csproj" />
     <ProjectReference Include="..\CoreDFeMonitor.Core\CoreDFeMonitor.Core.csproj" />
-    <ProjectReference Include="..\CoreDFeMonitor.Infrastructure\CoreDFeMonitor.Infrastructure.csproj" />
+    <ProjectReference
+      Include="..\CoreDFeMonitor.Infrastructure\CoreDFeMonitor.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

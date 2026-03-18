@@ -1,10 +1,6 @@
-// src/CoreDFeMonitor.Application/Features/Empresas/Commands/RegistrarEmpresaCommandHandler.cs
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Interfaces;
-using MediatR;
+using CoreDFeMonitor.Core.Mediator;
 
 namespace CoreDFeMonitor.Application.Features.Empresas.Commands
 {
