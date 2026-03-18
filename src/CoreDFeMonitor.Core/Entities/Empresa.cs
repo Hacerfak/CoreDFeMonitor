@@ -25,6 +25,7 @@ namespace CoreDFeMonitor.Core.Entities
         public string? CaminhoCertificado { get; private set; }
         public string? SenhaCertificado { get; private set; }
         public DateTime DataCadastro { get; private set; }
+        public string UltimoNsu { get; private set; } = "000000000000000"; // Sempre 15 dígitos
 
         protected Empresa() { }
 
@@ -67,6 +68,12 @@ namespace CoreDFeMonitor.Core.Entities
             if (cnpjLimpo.Length != 14)
                 throw new ArgumentException("CNPJ inválido. O CNPJ deve conter 14 dígitos.");
             return cnpjLimpo;
+        }
+
+        public void AtualizarNsu(string novoNsu)
+        {
+            if (!string.IsNullOrEmpty(novoNsu))
+                UltimoNsu = novoNsu.PadLeft(15, '0');
         }
     }
 }

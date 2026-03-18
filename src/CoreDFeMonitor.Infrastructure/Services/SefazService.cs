@@ -183,5 +183,72 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 );
             }
         }
+
+        public async Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa)
+        {
+            var documentosLidos = new List<DocumentoZip>();
+
+            // Variável defensiva string: Evita Nulos e garante o formato
+            string nsuAtual = string.IsNullOrEmpty(empresa.UltimoNsu) ? "000000000000000" : empresa.UltimoNsu.PadLeft(15, '0');
+
+            try
+            {
+                if (!Enum.TryParse(empresa.Uf.ToUpper(), out Estado estadoSefaz))
+                    return new SefazDistribuicaoResult(false, nsuAtual, "UF inválida.", documentosLidos);
+
+                var configCertificado = new ConfiguracaoCertificado()
+                {
+                    TipoCertificado = TipoCertificado.A1ByteArray,
+                    ArrayBytesArquivo = File.ReadAllBytes(empresa.CaminhoCertificado!),
+                    Senha = empresa.SenhaCertificado ?? string.Empty,
+                    SignatureMethodSignedXml = "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+                    DigestMethodReference = "http://www.w3.org/2000/09/xmldsig#sha1"
+                };
+
+                var configTemp = new NFe.Utils.ConfiguracaoServico
+                {
+                    tpAmb = TipoAmbiente.Producao,
+                    tpEmis = NFe.Classes.Informacoes.Identificacao.Tipos.TipoEmissao.teNormal,
+                    cUF = estadoSefaz,
+                    ModeloDocumento = ModeloDocumento.NFe,
+                    Certificado = configCertificado,
+                    TimeOut = 30000,
+                    ValidarSchemas = false,
+                    DefineVersaoServicosAutomaticamente = true
+                };
+
+                using var servicoNfe = new ServicosNFe(configTemp);
+
+                // O método do Zeus exige string para tudo! Convertemos o Estado(enum) para o seu código (int) e depois para string!
+                string ufArg = ((int)estadoSefaz).ToString();
+                string cnpjArg = empresa.Cnpj;
+
+                var retorno = servicoNfe.NfeDistDFeInteresse(ufArg, cnpjArg, nsuAtual);
+
+                if (retorno?.Retorno == null)
+                    return new SefazDistribuicaoResult(false, nsuAtual, "Sefaz não respondeu (Retorno nulo).", documentosLidos);
+
+                var ret = retorno.Retorno;
+
+                // cStat 138 = Documento Localizado
+                if (ret.cStat == 138 && ret.loteDistDFeInt != null)
+                {
+                    foreach (var docZip in ret.loteDistDFeInt)
+                    {
+                        var xmlDescompactado = Compressao.Unzip(docZip.XmlNfe);
+                        documentosLidos.Add(new DocumentoZip(docZip.NSU.ToString(), docZip.schema, xmlDescompactado));
+                    }
+                    _logger.LogInformation("Baixados {Count} novos documentos da Sefaz para {CNPJ}.", documentosLidos.Count, empresa.Cnpj);
+                }
+
+                string nsuParaGravar = string.IsNullOrEmpty(ret.ultNSU.ToString()) ? nsuAtual : ret.ultNSU.ToString();
+                return new SefazDistribuicaoResult(true, nsuParaGravar, ret.xMotivo ?? "", documentosLidos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Falha de comunicação na Sefaz: {Message}", ex.Message);
+                return new SefazDistribuicaoResult(false, nsuAtual, $"Falha Sefaz: {ex.Message}", documentosLidos);
+            }
+        }
     }
 }

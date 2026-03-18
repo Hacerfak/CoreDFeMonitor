@@ -28,6 +28,7 @@ namespace CoreDFeMonitor.Infrastructure
 
             // Repositórios
             services.AddScoped<IEmpresaRepository, EmpresaRepository>();
+            services.AddScoped<IDocumentoRepository, DocumentoRepository>();
 
             // Serviços Sefaz / Zeus
             services.AddSingleton<ICertificadoService, CertificadoService>(); // Pode ser Singleton pois não tem estado

@@ -1,16 +1,49 @@
-namespace CoreDFeMonitor.Worker;
+// src/CoreDFeMonitor.Worker/Worker.cs
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using CoreDFeMonitor.Application.Features.Documentos.Commands;
+using CoreDFeMonitor.Core.Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-public class Worker(ILogger<Worker> logger) : BackgroundService
+namespace CoreDFeMonitor.Worker
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public class Worker : BackgroundService
     {
-        while (!stoppingToken.IsCancellationRequested)
+        private readonly ILogger<Worker> _logger;
+        private readonly IServiceProvider _serviceProvider;
+
+        public Worker(ILogger<Worker> logger, IServiceProvider serviceProvider)
         {
-            if (logger.IsEnabled(LogLevel.Information))
+            _logger = logger;
+            _serviceProvider = serviceProvider;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("Serviço Baseado em Eventos do Zeus Fiscal iniciado.");
+
+            while (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                try
+                {
+                    // Usa scope para não esgotar as memórias do banco no Singleton do Worker
+                    using (var scope = _serviceProvider.CreateScope())
+                    {
+                        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                        await mediator.Send(new SincronizarDocumentosCommand(), stoppingToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro de processamento no Worker: {Message}", ex.Message);
+                }
+
+                _logger.LogInformation("Ciclo finalizado. Pausa de 5 minutos antes da próxima varredura.");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
-            await Task.Delay(1000, stoppingToken);
         }
     }
 }
