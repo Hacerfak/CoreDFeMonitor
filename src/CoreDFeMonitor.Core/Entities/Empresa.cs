@@ -6,9 +6,9 @@ namespace CoreDFeMonitor.Core.Entities
     public class Empresa
     {
         public Guid Id { get; private set; }
-        public string Cnpj { get; private set; }
-        public string RazaoSocial { get; private set; }
-        public string Uf { get; private set; }
+        public string Cnpj { get; private set; } = string.Empty;
+        public string RazaoSocial { get; private set; } = string.Empty;
+        public string Uf { get; private set; } = string.Empty;
         public string? InscricaoEstadual { get; private set; }
         public string? Telefone { get; private set; }
         public string? Email { get; private set; }

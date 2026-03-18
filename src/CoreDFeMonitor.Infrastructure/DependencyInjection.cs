@@ -5,8 +5,6 @@ using CoreDFeMonitor.Infrastructure.Data.Repositories;
 using CoreDFeMonitor.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.IO;
-using System;
 
 namespace CoreDFeMonitor.Infrastructure
 {
@@ -17,11 +15,16 @@ namespace CoreDFeMonitor.Infrastructure
             // Define o local do ficheiro SQLite (Pasta LocalApplicationData do utilizador)
             var folder = Environment.SpecialFolder.LocalApplicationData;
             var path = Environment.GetFolderPath(folder);
+            path = Path.Join(path, "CoreDFeMonitor");
+            Directory.CreateDirectory(path);
+
             var dbPath = Path.Join(path, "CoreDFeMonitor.db");
 
             // Regista o DbContext com o SQLite
             services.AddDbContext<DFeMonitorDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
+
+            Console.WriteLine($"\n[INFRAESTRUTURA] Banco de Dados SQLite configurado em: {dbPath}\n");
 
             // Repositórios
             services.AddScoped<IEmpresaRepository, EmpresaRepository>();

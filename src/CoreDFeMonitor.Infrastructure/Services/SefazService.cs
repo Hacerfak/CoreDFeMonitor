@@ -56,7 +56,7 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 DefineVersaoServicosAutomaticamente = true, // Zeus tentará resolver a versão WSDL dinamicamente
                 VersaoLayout = VersaoServico.Versao400,
                 ModeloDocumento = ModeloDocumento.NFe,
-                tpEmis = NFe.Classes.Informacoes.Identificacao.Tipos.TipoEmissao.teNormal,
+                tpEmis = TipoEmissao.teNormal,
                 tpAmb = TipoAmbiente.Producao, // Mudaremos para Homologacao se precisar testar futuramente
                 cUF = estadoSefaz, // INFORMA O ESTADO (Crucial para o DNS correto do WSDL)
                 TimeOut = 30000,
@@ -126,18 +126,17 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 if (!Enum.TryParse(uf.ToUpper(), out Estado estadoSefaz))
                     return new SefazCadastroResult(false, cnpjBase, razaoBase, null, null, null, null, null, null, null, null, "UF inválida.");
 
-                var configTemp = new NFe.Utils.ConfiguracaoServico
+                var configTemp = new ConfiguracaoServico
                 {
-                    tpAmb = DFe.Classes.Flags.TipoAmbiente.Producao,
+                    tpAmb = TipoAmbiente.Producao,
                     tpEmis = TipoEmissao.teNormal,
                     cUF = estadoSefaz,
-                    ModeloDocumento = DFe.Classes.Flags.ModeloDocumento.NFe,
+                    ModeloDocumento = ModeloDocumento.NFe,
                     Certificado = configCertificado,
                     TimeOut = 20000,
                     ValidarSchemas = false,
-                    DefineVersaoServicosAutomaticamente = false,
-                    VersaoNfeConsultaCadastro = DFe.Classes.Flags.VersaoServico.Versao400,
-                    VersaoLayout = DFe.Classes.Flags.VersaoServico.Versao400
+                    DefineVersaoServicosAutomaticamente = true,
+                    VersaoLayout = VersaoServico.Versao400
                 };
 
                 using var servicoNfe = new ServicosNFe(configTemp);
