@@ -61,6 +61,7 @@ namespace CoreDFeMonitor.Infrastructure.Data
                         entity.HasKey(d => d.Id);
                         entity.Property(d => d.Nsu).HasMaxLength(15);
                         entity.Property(d => d.ChaveAcesso).HasMaxLength(44);
+                        entity.Property(d => d.CienciaEnviada).IsRequired();
                         entity.HasIndex(d => new { d.EmpresaId, d.Nsu }).IsUnique(); // Impede baixar o mesmo NSU 2x
                   });
             }

@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+    x:Class="CoreDFeMonitor.UI.Views.ConfiguracoesView"
+    x:DataType="vm:ConfiguracoesViewModel"
+    Background="#F4F6F8">
+
+    <StackPanel Margin="30" Spacing="20">
+        <StackPanel Orientation="Horizontal" Spacing="15">
+            <Button Background="Transparent" Padding="5" Command="{Binding VoltarDashboardCommand}">
+                <icons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="#673AB7" />
+            </Button>
+            <TextBlock Text="Configurações do Sistema" FontSize="28" FontWeight="Bold"
+                Foreground="#333333" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Border Background="White" CornerRadius="12" Padding="30" BoxShadow="0 10 30 0 #1A000000"
+            Margin="0,20,0,0">
+            <StackPanel Spacing="15">
+                <Grid ColumnDefinitions="*, Auto">
+                    <StackPanel Grid.Column="0" Spacing="5">
+                        <TextBlock Text="Empresas Monitoradas" FontSize="20" FontWeight="SemiBold"
+                            Foreground="#222222" />
+                        <TextBlock
+                            Text="Gerencie os CNPJs que estão vinculados à busca automática da SEFAZ."
+                            Foreground="Gray" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Content="+ Adicionar Empresa"
+                        Command="{Binding AdicionarNovaEmpresaCommand}"
+                        Background="#4CAF50" Foreground="White" FontWeight="Bold" CornerRadius="8"
+                        Padding="15,10" />
+                </Grid>
+
+                <Separator Background="#EEEEEE" Margin="0,15" />
+
+                <TextBlock Text="A lista de empresas aparecerá aqui..." FontStyle="Italic"
+                    Foreground="DarkGray" HorizontalAlignment="Center" Margin="0,20" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

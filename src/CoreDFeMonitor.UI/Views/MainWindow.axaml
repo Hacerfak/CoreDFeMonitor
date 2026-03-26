@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:views="using:CoreDFeMonitor.UI.Views"
+    x:Class="CoreDFeMonitor.UI.Views.MainWindow"
+    x:DataType="vm:MainViewModel"
+    Title="Core DFe Monitor"
+    Width="1024" Height="768"
+    WindowStartupLocation="CenterScreen">
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type vm:CadastroEmpresaViewModel}">
+            <views:CadastroEmpresaView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ConfiguracoesViewModel}">
+            <views:ConfiguracoesView />
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <Grid>
+        <Border Background="#F4F6F8" ZIndex="100" IsVisible="{Binding IsCarregandoAplicacao}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="6" Foreground="#673AB7" />
+                <TextBlock Text="Carregando Core DFe Monitor..." FontSize="18" FontWeight="SemiBold"
+                    Foreground="#333333" />
+            </StackPanel>
+        </Border>
+
+        <TransitioningContentControl Content="{Binding ViewAtual}" />
+    </Grid>
+</Window>

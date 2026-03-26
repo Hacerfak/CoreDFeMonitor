@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace CoreDFeMonitor.UI;
+namespace CoreDFeMonitor.UI.Views;
 
 public partial class MainWindow : Window
 {

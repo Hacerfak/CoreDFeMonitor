@@ -1,3 +1,4 @@
+// src/CoreDFeMonitor.Application/Features/Documentos/Commands/SincronizarDocumentosCommand.cs
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,7 +51,29 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         bool jaExiste = await _documentoRepository.ExisteNsuAsync(empresa.Id, docZip.Nsu, cancellationToken);
                         if (!jaExiste)
                         {
-                            novosDocumentos.Add(new Documento(empresa.Id, docZip.Nsu, docZip.Schema, docZip.XmlDescompactado));
+                            var novoDoc = new Documento(empresa.Id, docZip.Nsu, docZip.Schema, docZip.XmlDescompactado);
+
+                            // ==============================================================
+                            // MAGIA ACONTECENDO AQUI: Ciência Automática
+                            // ==============================================================
+                            if (novoDoc.RequerCienciaAutomatica(empresa.Cnpj))
+                            {
+                                _logger.LogInformation("Documento (Chave: {Chave}) emitido contra o CNPJ detectado. Enviando Ciência (210210)...", novoDoc.ChaveAcesso);
+
+                                var cienciaResult = await _sefazService.EnviarCienciaOperacaoAsync(empresa, novoDoc.ChaveAcesso);
+
+                                if (cienciaResult.Sucesso)
+                                {
+                                    novoDoc.MarcarCienciaEnviada();
+                                    _logger.LogInformation("Ciência registrada na Sefaz com sucesso: {Msg}", cienciaResult.Mensagem);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Sefaz negou o envio de Ciência: {Msg}", cienciaResult.Mensagem);
+                                }
+                            }
+
+                            novosDocumentos.Add(novoDoc);
                         }
                     }
 
@@ -59,7 +82,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         await _documentoRepository.AdicionarLoteAsync(novosDocumentos, cancellationToken);
                     }
 
-                    // Se a Sefaz andou o "ponteiro" do NSU, nós andamos o da base de dados!
                     if (empresa.UltimoNsu != resultado.UltimoNsuRetornado)
                     {
                         empresa.AtualizarNsu(resultado.UltimoNsuRetornado);
@@ -67,7 +89,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                     }
                 }
 
-                // MOC Exigência: 5 segundos de intervalo para evitar banimento (Consumo Indevido cStat 656)
+                // MOC Exigência: 5 segundos de intervalo para evitar cStat 656
                 await Task.Delay(5000, cancellationToken);
             }
 

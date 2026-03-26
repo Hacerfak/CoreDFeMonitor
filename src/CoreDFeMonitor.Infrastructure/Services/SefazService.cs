@@ -184,6 +184,48 @@ namespace CoreDFeMonitor.Infrastructure.Services
             }
         }
 
+        public async Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso)
+        {
+            try
+            {
+                var config = CriarConfiguracaoZeus(empresa);
+                using var servicoNfe = new ServicosNFe(config);
+
+                int idLote = 1;
+                int seqEvento = 1; // Para Ciência e Confirmação, o sequencial de evento é sempre 1
+
+                _logger.LogInformation("Disparando Evento de Ciência (210210) para a Chave {Chave}", chaveAcesso);
+
+                var retorno = servicoNfe.RecepcaoEventoManifestacaoDestinatario(
+                    idLote,
+                    seqEvento,
+                    chaveAcesso,
+                    NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdCienciaDaOperacao, // O enum oficial do MOC
+                    empresa.Cnpj);
+
+                if (retorno?.Retorno?.retEvento != null && retorno.Retorno.retEvento.Count > 0)
+                {
+                    var retEv = retorno.Retorno.retEvento[0].infEvento;
+
+                    // 135 = Evento registrado e vinculado à NF-e com sucesso!
+                    // 573 = Rejeição: Duplicidade de Evento (O que significa que nós já demos ciência antes, não tem problema)
+                    if (retEv.cStat == 135 || retEv.cStat == 573)
+                    {
+                        return new SefazManifestacaoResult(true, $"[{retEv.cStat}] {retEv.xMotivo}");
+                    }
+
+                    return new SefazManifestacaoResult(false, $"Rejeição Sefaz [{retEv.cStat}]: {retEv.xMotivo}");
+                }
+
+                return new SefazManifestacaoResult(false, "Sefaz retornou vazio para a requisição do Evento.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro de código ao tentar emitir Ciência para a chave {Chave}", chaveAcesso);
+                return new SefazManifestacaoResult(false, $"Exceção Local: {ex.Message}");
+            }
+        }
+
         public async Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa)
         {
             var documentosLidos = new List<DocumentoZip>();

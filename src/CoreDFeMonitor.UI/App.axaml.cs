@@ -5,6 +5,7 @@ using CoreDFeMonitor.Application;
 using CoreDFeMonitor.Infrastructure;
 using CoreDFeMonitor.Infrastructure.Data;
 using CoreDFeMonitor.UI.ViewModels;
+using CoreDFeMonitor.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Avalonia.Platform.Storage;
@@ -22,39 +23,45 @@ namespace CoreDFeMonitor.UI
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                // 1. Instanciamos a janela primeiro para pegar a referência nativa do S.O.
-                var mainWindow = new MainWindow();
-
-                // 2. Configuração do Container de Injeção de Dependências
                 var services = new ServiceCollection();
 
-                services.AddLogging(builder =>
-                {
-                    builder.AddConsole(); // Imprime no terminal
-                    builder.SetMinimumLevel(LogLevel.Information);
-                });        // Adiciona Logging
+                // Infraestrutura e Aplicação
+                services.AddLogging(builder => { builder.AddConsole(); builder.SetMinimumLevel(LogLevel.Information); });
+                services.AddInfrastructure();
+                services.AddApplication();
 
-                services.AddInfrastructure(); // Adiciona EF Core SQLite e Zeus Fiscal
-                services.AddApplication();    // Adiciona o MediatR
-
-                // Registra o StorageProvider nativo da janela (para selecionar o certificado .pfx)
-                services.AddSingleton<IStorageProvider>(mainWindow.StorageProvider);
-
-                // Registra o ViewModel
+                // Registro dos ViewModels (Eles precisam ser Singleton ou Transient dependendo do caso)
+                // O MainViewModel deve ser Singleton para manter o estado da tela
+                services.AddSingleton<MainViewModel>();
                 services.AddTransient<CadastroEmpresaViewModel>();
+                services.AddTransient<DashboardViewModel>();
+                services.AddTransient<ConfiguracoesViewModel>();
 
                 var serviceProvider = services.BuildServiceProvider();
 
-                // 3. Garante que o banco de dados SQLite físico seja criado na máquina
+                // Cria o banco de dados se não existir
                 using (var scope = serviceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<DFeMonitorDbContext>();
                     dbContext.Database.EnsureCreated();
                 }
 
-                // 4. Liga o DataContext (ViewModel) à Janela
-                mainWindow.DataContext = serviceProvider.GetRequiredService<CadastroEmpresaViewModel>();
+                // Resgata o Roteador Principal
+                var mainViewModel = serviceProvider.GetRequiredService<MainViewModel>();
+
+                var mainWindow = new MainWindow
+                {
+                    DataContext = mainViewModel
+                };
+
+                // Injeta serviços especiais se necessário (como o StorageProvider para abrir certificados)
+                // Isto é opcional se não usar mais injeção direta da janela, mas mantemos para compatibilidade
+                // services.AddSingleton<Avalonia.Platform.Storage.IStorageProvider>(mainWindow.StorageProvider);
+
                 desktop.MainWindow = mainWindow;
+
+                // MAGIA: Inicializa o roteamento (Busca na DB e define a tela)
+                _ = mainViewModel.InicializarAsync();
             }
 
             base.OnFrameworkInitializationCompleted();

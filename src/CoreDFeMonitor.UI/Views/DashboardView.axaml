@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+    x:Class="CoreDFeMonitor.UI.Views.DashboardView"
+    x:DataType="vm:DashboardViewModel">
+
+    <Grid ColumnDefinitions="250, *">
+        <Border Grid.Column="0" Background="#2C3E50" Padding="0,20">
+            <StackPanel Spacing="10">
+                <TextBlock Text="DFe Monitor" Foreground="White" FontSize="22" FontWeight="Bold"
+                    Margin="20,0,20,30" />
+
+                <Button Background="#34495E" Foreground="White" HorizontalAlignment="Stretch"
+                    Padding="20,15" CornerRadius="0">
+                    <StackPanel Orientation="Horizontal" Spacing="15">
+                        <icons:MaterialIcon Kind="ViewDashboard" Width="20" Height="20"
+                            Foreground="White" />
+                        <TextBlock Text="Dashboard" VerticalAlignment="Center" FontSize="15" />
+                    </StackPanel>
+                </Button>
+
+                <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
+                    Padding="20,15" CornerRadius="0" Command="{Binding AbrirConfiguracoesCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="15">
+                        <icons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#BDC3C7" />
+                        <TextBlock Text="Configurações" VerticalAlignment="Center" FontSize="15" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Background="#F4F6F8" Padding="30">
+            <StackPanel Spacing="20">
+                <TextBlock Text="Visão Geral" FontSize="28" FontWeight="Bold" Foreground="#333333" />
+                <TextBlock Text="Em breve, aqui aparecerão as notas descarregadas pelo Worker..."
+                    Foreground="Gray" FontSize="16" />
+
+                <Grid ColumnDefinitions="*, 20, *, 20, *" Height="120" Margin="0,20,0,0">
+                    <Border Grid.Column="0" Background="White" CornerRadius="10"
+                        BoxShadow="0 4 10 0 #1A000000" Padding="20" />
+                    <Border Grid.Column="2" Background="White" CornerRadius="10"
+                        BoxShadow="0 4 10 0 #1A000000" Padding="20" />
+                    <Border Grid.Column="4" Background="White" CornerRadius="10"
+                        BoxShadow="0 4 10 0 #1A000000" Padding="20" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -13,6 +13,7 @@ namespace CoreDFeMonitor.UI.ViewModels
     {
         private readonly IMediator _mediator;
         private readonly ISefazService _sefazService;
+        private readonly MainViewModel _mainViewModel;
 
         // Lista de UFs para o ComboBox
         public string[] ListaUFs { get; } = { "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO" };
@@ -42,10 +43,11 @@ namespace CoreDFeMonitor.UI.ViewModels
         [ObservableProperty] private bool _isCarregando = false;
         [ObservableProperty] private string _mensagemStatus = string.Empty;
 
-        public CadastroEmpresaViewModel(IMediator mediator, ISefazService sefazService)
+        public CadastroEmpresaViewModel(IMediator mediator, ISefazService sefazService, MainViewModel mainViewModel)
         {
             _mediator = mediator;
             _sefazService = sefazService;
+            _mainViewModel = mainViewModel;
         }
 
         [RelayCommand]
@@ -147,6 +149,7 @@ namespace CoreDFeMonitor.UI.ViewModels
                 // Limpa ou navega para o Dashboard
                 VoltarFase1();
                 CaminhoCertificado = ""; SenhaCertificado = "";
+                _mainViewModel.NavegarPara<DashboardViewModel>();
             }
         }
     }

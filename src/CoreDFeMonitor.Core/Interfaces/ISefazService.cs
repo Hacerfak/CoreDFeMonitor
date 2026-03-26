@@ -21,11 +21,13 @@ namespace CoreDFeMonitor.Core.Interfaces
 
     public record DocumentoZip(string Nsu, string Schema, string XmlDescompactado);
     public record SefazDistribuicaoResult(bool Sucesso, string UltimoNsuRetornado, string Mensagem, List<DocumentoZip> Documentos);
+    public record SefazManifestacaoResult(bool Sucesso, string Mensagem);
 
     public interface ISefazService
     {
         bool ValidarConfiguracao(Empresa empresa);
         Task<SefazCadastroResult> ConsultarCadastroAsync(string uf, string caminhoCertificado, string senha);
         Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa);
+        Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso);
     }
 }
