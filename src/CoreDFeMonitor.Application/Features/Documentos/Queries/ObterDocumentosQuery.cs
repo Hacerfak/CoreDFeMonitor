@@ -16,7 +16,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
         public DateTime? DataInicio { get; set; }
         public DateTime? DataFim { get; set; }
         public string FiltroTexto { get; set; } = string.Empty;
-        public string TipoDocumento { get; set; } = "Todos"; // Todos, NFe, Eventos
+        public string TipoDocumento { get; set; } = "Todos";
     }
 
     public class ObterDocumentosQueryHandler : IRequestHandler<ObterDocumentosQuery, List<DocumentoListagemDto>>
@@ -33,26 +33,28 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var todos = await _documentoRepository.ObterTodasAsync(cancellationToken);
             var query = todos.AsEnumerable();
 
-            // 1. Filtro de Datas (Usamos a DataProcessamento como base se dhEmi não existir)
             if (request.DataInicio.HasValue)
                 query = query.Where(d => d.DataProcessamento.Date >= request.DataInicio.Value.Date);
             if (request.DataFim.HasValue)
                 query = query.Where(d => d.DataProcessamento.Date <= request.DataFim.Value.Date);
 
-            // 2. Filtro de Tipo
+            // FILTROS ATUALIZADOS PARA SUPORTAR CT-E
             if (request.TipoDocumento == "NF-e")
                 query = query.Where(d => d.Schema.Contains("nfe", StringComparison.OrdinalIgnoreCase));
+            else if (request.TipoDocumento == "CT-e")
+                query = query.Where(d => d.Schema.Contains("cte", StringComparison.OrdinalIgnoreCase));
             else if (request.TipoDocumento == "Eventos")
                 query = query.Where(d => d.Schema.Contains("evento", StringComparison.OrdinalIgnoreCase));
 
-            // 3. Extração On-The-Fly (Em sistemas reais gigantes, essas colunas ficam no banco)
             var listaFinal = new List<DocumentoListagemDto>();
             foreach (var doc in query)
             {
-                string emitente = ExtrairTag(doc.XmlConteudo, "xNome", "Emitente Desconhecido");
-                string valor = ExtrairTag(doc.XmlConteudo, "vNF", "0.00");
+                // Extração inteligente de Emitente (busca especificamente dentro da tag <emit>)
+                string emitente = ExtrairEmitente(doc.XmlConteudo);
 
-                // 4. Filtro de Texto (Chave ou Emitente)
+                // Tenta achar o Valor da NF-e, se não achar, tenta o Valor do CT-e
+                string valor = ExtrairTag(doc.XmlConteudo, "vNF", null) ?? ExtrairTag(doc.XmlConteudo, "vTPrest", "0.00") ?? "0.00";
+
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
                     if (!doc.ChaveAcesso.Contains(request.FiltroTexto) &&
@@ -70,17 +72,28 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             return listaFinal.OrderByDescending(x => x.Nsu).ToList();
         }
 
-        private string ExtrairTag(string xml, string tag, string padrao)
+        private string? ExtrairTag(string xml, string tag, string? padrao)
         {
             var match = Regex.Match(xml, $"<{tag}>(.*?)</{tag}>");
             return match.Success ? match.Groups[1].Value : padrao;
+        }
+
+        private string ExtrairEmitente(string xml)
+        {
+            var match = Regex.Match(xml, @"<emit>.*?<xNome>(.*?)</xNome>.*?</emit>", RegexOptions.Singleline);
+            return match.Success ? match.Groups[1].Value : "Emitente Desconhecido";
         }
 
         private string MapearSchema(string schema)
         {
             if (schema.Contains("procNFe")) return "NF-e Completa";
             if (schema.Contains("resNFe")) return "Resumo NF-e";
-            if (schema.Contains("resEvento")) return "Evento Sefaz";
+
+            // ADICIONADOS SCHEMAS DE CT-E
+            if (schema.Contains("procCTe")) return "CT-e Completo";
+            if (schema.Contains("resCTe")) return "Resumo CT-e";
+
+            if (schema.Contains("resEvento") || schema.Contains("procEvento") || schema.Contains("retEnvEvento")) return "Evento Sefaz";
             return "Outro";
         }
     }

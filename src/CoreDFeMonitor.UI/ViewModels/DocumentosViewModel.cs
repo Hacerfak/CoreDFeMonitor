@@ -20,7 +20,7 @@ namespace CoreDFeMonitor.UI.ViewModels
         [ObservableProperty] private DateTimeOffset? _dataFim = DateTimeOffset.Now;
         [ObservableProperty] private string _filtroTexto = string.Empty;
         [ObservableProperty] private string _tipoSelecionado = "Todos";
-        public string[] ListaTipos { get; } = { "Todos", "NF-e", "Eventos" };
+        public string[] ListaTipos { get; } = { "Todos", "NF-e", "CT-e", "Eventos" };
 
         [ObservableProperty] private bool _isCarregando = false;
         [ObservableProperty] private bool _todosSelecionados = false;

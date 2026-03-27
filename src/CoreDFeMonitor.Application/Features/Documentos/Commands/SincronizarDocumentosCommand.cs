@@ -52,7 +52,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    _logger.LogInformation(">> Sincronizando empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
+                    _logger.LogInformation(">> Sincronizando NF-es da empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
 
                     var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
 
@@ -92,6 +92,50 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         if (empresa.UltimoNsu != resultado.UltimoNsuRetornado)
                         {
                             empresa.AtualizarNsu(resultado.UltimoNsuRetornado);
+                            await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
+                        }
+                    }
+
+                    // === NOVO: BUSCA DE CT-E ===
+                    _logger.LogInformation(">> Sincronizando CT-es da empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsuCte);
+
+                    var resultadoCte = await _sefazService.BaixarDocumentosCteAsync(empresa);
+
+                    if (resultadoCte.Sucesso)
+                    {
+                        var novosCtes = new List<Documento>();
+
+                        foreach (var docZip in resultadoCte.Documentos)
+                        {
+                            // Para CT-e, podemos adicionar um prefixo no NSU no BD para não dar conflito com o da NF-e, 
+                            // ou usar o Schema para diferenciar. Mas o banco permite porque o Schema será diferente (procCTe).
+                            // Vamos adicionar "CTE_" na frente do NSU só para o index único do banco não falhar caso os NSUs coincidam
+                            string nsuUnico = "CTE_" + docZip.Nsu;
+
+                            bool jaExiste = await _documentoRepository.ExisteNsuAsync(empresa.Id, nsuUnico, cancellationToken);
+                            if (!jaExiste)
+                            {
+                                var novoDoc = new Documento(empresa.Id, nsuUnico, docZip.Schema, docZip.XmlDescompactado);
+
+                                // CT-e não possui Evento de "Ciência da Emissão" obrigatório para liberação do XML,
+                                // o WebService do CT-e já entrega o XML completo (procCTe) de cara!
+                                // Portanto, apenas salvamos no banco e no disco!
+
+                                novosCtes.Add(novoDoc);
+
+                                if (novoDoc.ChaveAcesso != "SEM_CHAVE_NO_RESUMO")
+                                {
+                                    _ = _armazenamentoXmlService.SalvarXmlAsync(empresa.Cnpj, novoDoc.ChaveAcesso, novoDoc.Schema, novoDoc.XmlConteudo);
+                                }
+                            }
+                        }
+
+                        if (novosCtes.Count > 0)
+                            await _documentoRepository.AdicionarLoteAsync(novosCtes, cancellationToken);
+
+                        if (empresa.UltimoNsuCte != resultadoCte.UltimoNsuRetornado)
+                        {
+                            empresa.AtualizarNsuCte(resultadoCte.UltimoNsuRetornado);
                             await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
                         }
                     }

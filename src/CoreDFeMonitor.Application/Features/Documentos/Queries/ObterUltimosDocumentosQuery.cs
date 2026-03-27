@@ -40,14 +40,18 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             return ultimos;
         }
 
+        // src/CoreDFeMonitor.Application/Features/Documentos/Queries/ObterUltimosDocumentosQuery.cs
+
         private string MapearSchema(string schema)
         {
-            // Mapeamento simples para o utilizador
-            if (schema.Contains("procNFe")) return "NFe Processada";
-            if (schema.Contains("resNFe")) return "Resumo NFe";
-            if (schema.Contains("resEvento")) return "Resumo Evento";
-            if (schema.Contains("retEnvEvento")) return "Retorno Evento";
-            return schema;
+            if (schema.Contains("procNFe")) return "NF-e Completa";
+            if (schema.Contains("resNFe")) return "Resumo NF-e";
+
+            if (schema.Contains("procCTe")) return "CT-e Completo";
+            if (schema.Contains("resCTe")) return "Resumo CT-e";
+
+            if (schema.Contains("resEvento") || schema.Contains("procEvento") || schema.Contains("retEnvEvento")) return "Evento Sefaz";
+            return "Outro";
         }
     }
 }

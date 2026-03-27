@@ -52,6 +52,8 @@ namespace CoreDFeMonitor.Infrastructure.Data
                         entity.Property(e => e.Cep).HasMaxLength(10);
                         entity.Property(e => e.Telefone).HasMaxLength(20);
                         entity.Property(e => e.Email).HasMaxLength(150);
+                        entity.Property(e => e.UltimoNsu).IsRequired().HasMaxLength(15).HasDefaultValue("000000000000000");
+                        entity.Property(e => e.UltimoNsuCte).IsRequired().HasMaxLength(15).HasDefaultValue("000000000000000");
                         entity.Property(e => e.DataCadastro);
                   });
 

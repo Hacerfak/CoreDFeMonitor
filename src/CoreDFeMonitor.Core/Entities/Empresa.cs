@@ -26,6 +26,7 @@ namespace CoreDFeMonitor.Core.Entities
         public string? SenhaCertificado { get; private set; }
         public DateTime DataCadastro { get; private set; }
         public string UltimoNsu { get; private set; } = "000000000000000"; // Sempre 15 dígitos
+        public string UltimoNsuCte { get; private set; } = "000000000000000";
 
         protected Empresa() { }
 
@@ -74,6 +75,12 @@ namespace CoreDFeMonitor.Core.Entities
         {
             if (!string.IsNullOrEmpty(novoNsu))
                 UltimoNsu = novoNsu.PadLeft(15, '0');
+        }
+
+        public void AtualizarNsuCte(string novoNsu)
+        {
+            if (!string.IsNullOrEmpty(novoNsu))
+                UltimoNsuCte = novoNsu.PadLeft(15, '0');
         }
     }
 }

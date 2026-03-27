@@ -22,7 +22,7 @@ namespace CoreDFeMonitor.Infrastructure
 
             // Regista o DbContext com o SQLite
             services.AddDbContext<DFeMonitorDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath};Cache=Shared;BusyTimeout=5000;"));
+                options.UseSqlite($"Data Source={dbPath};Cache=Shared;"));
 
             Console.WriteLine($"\n[INFRAESTRUTURA] Banco de Dados SQLite configurado em: {dbPath}\n");
 

@@ -28,6 +28,7 @@ namespace CoreDFeMonitor.Core.Interfaces
         bool ValidarConfiguracao(Empresa empresa);
         Task<SefazCadastroResult> ConsultarCadastroAsync(string uf, string caminhoCertificado, string senha);
         Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa);
+        Task<SefazDistribuicaoResult> BaixarDocumentosCteAsync(Empresa empresa);
         Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso);
     }
 }
