@@ -28,30 +28,28 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var ultimos = documentos
                 .OrderByDescending(d => d.DataProcessamento)
                 .Take(5)
-                .Select(d => new DocumentoDto(
-                    d.Id,
-                    d.Nsu,
-                    d.ChaveAcesso,
-                    MapearSchema(d.Schema), // Função auxiliar
-                    d.DataProcessamento,
-                    d.CienciaEnviada))
+                .Select(d =>
+                {
+                    // Lógica para deixar a Grid do Dashboard bonita
+                    string schemaDisplay = d.TipoDocumento;
+
+                    // Se for evento e tivermos o nome exato (ex: "Carta de Correção"), usamos o nome!
+                    if (d.TipoDocumento.StartsWith("Evento") && !string.IsNullOrEmpty(d.NomeEvento))
+                    {
+                        schemaDisplay = d.NomeEvento;
+                    }
+
+                    return new DocumentoDto(
+                        d.Id,
+                        d.Nsu,
+                        d.ChaveAcesso,
+                        schemaDisplay,
+                        d.DataProcessamento,
+                        d.CienciaEnviada);
+                })
                 .ToList();
 
             return ultimos;
-        }
-
-        // src/CoreDFeMonitor.Application/Features/Documentos/Queries/ObterUltimosDocumentosQuery.cs
-
-        private string MapearSchema(string schema)
-        {
-            if (schema.Contains("procNFe")) return "NF-e Completa";
-            if (schema.Contains("resNFe")) return "Resumo NF-e";
-
-            if (schema.Contains("procCTe")) return "CT-e Completo";
-            if (schema.Contains("resCTe")) return "Resumo CT-e";
-
-            if (schema.Contains("resEvento") || schema.Contains("procEvento") || schema.Contains("retEnvEvento")) return "Evento Sefaz";
-            return "Outro";
         }
     }
 }

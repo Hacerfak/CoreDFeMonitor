@@ -51,9 +51,14 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             {
                 // Extração inteligente de Emitente (busca especificamente dentro da tag <emit>)
                 string emitente = ExtrairEmitente(doc.XmlConteudo);
-
-                // Tenta achar o Valor da NF-e, se não achar, tenta o Valor do CT-e
                 string valor = ExtrairTag(doc.XmlConteudo, "vNF", null) ?? ExtrairTag(doc.XmlConteudo, "vTPrest", "0.00") ?? "0.00";
+
+                // Usa o Nome do Evento (se existir) para deixar a Grid bonita!
+                string schemaDisplay = doc.TipoDocumento;
+                if (doc.TipoDocumento.StartsWith("Evento") && !string.IsNullOrEmpty(doc.NomeEvento))
+                {
+                    schemaDisplay = doc.NomeEvento;
+                }
 
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
@@ -64,7 +69,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 
                 listaFinal.Add(new DocumentoListagemDto(
                     doc.Id, doc.Nsu, doc.ChaveAcesso,
-                    MapearSchema(doc.Schema), emitente, $"R$ {valor}",
+                    schemaDisplay, emitente, $"R$ {valor}",
                     doc.DataProcessamento, doc.CienciaEnviada, doc.XmlConteudo
                 ));
             }

@@ -1,3 +1,5 @@
+// src/CoreDFeMonitor.Core/Entities/Documento.cs
+using System;
 using System.Text.RegularExpressions;
 
 namespace CoreDFeMonitor.Core.Entities
@@ -7,59 +9,61 @@ namespace CoreDFeMonitor.Core.Entities
         public Guid Id { get; private set; }
         public Guid EmpresaId { get; private set; }
         public string Nsu { get; private set; } = string.Empty;
-        public string ChaveAcesso { get; private set; } = string.Empty;
         public string Schema { get; private set; } = string.Empty;
         public string XmlConteudo { get; private set; } = string.Empty;
+        public string ChaveAcesso { get; private set; } = string.Empty;
+        public bool CienciaEnviada { get; private set; }
         public DateTime DataProcessamento { get; private set; }
 
-        public bool CienciaEnviada { get; private set; } = false;
+        // NOVAS COLUNAS PARA CLASSIFICAÇÃO EXATA
+        public string TipoDocumento { get; private set; } = "Desconhecido";
+        public string TipoEvento { get; private set; } = string.Empty;
+        public string NomeEvento { get; private set; } = string.Empty;
 
-        protected Documento() { }
+        protected Documento() { } // Para o EF Core
 
         public Documento(Guid empresaId, string nsu, string schema, string xmlConteudo)
         {
             Id = Guid.NewGuid();
             EmpresaId = empresaId;
-            Nsu = nsu.PadLeft(15, '0');
+            Nsu = nsu;
             Schema = schema;
             XmlConteudo = xmlConteudo;
             DataProcessamento = DateTime.UtcNow;
-            ChaveAcesso = ExtrairChave(xmlConteudo);
+            CienciaEnviada = false;
+
+            ProcessarMetadadosDoXml();
         }
 
-        public void MarcarCienciaEnviada()
+        private void ProcessarMetadadosDoXml()
         {
-            CienciaEnviada = true;
-        }
+            // Extrai a Chave de Acesso
+            var matchChave = Regex.Match(XmlConteudo, @"<ch(?:NFe|CTe)>([0-9]{44})</ch(?:NFe|CTe)>");
+            ChaveAcesso = matchChave.Success ? matchChave.Groups[1].Value : "SEM_CHAVE_NO_RESUMO";
 
-        // Determina se este XML é uma NFe que precisa do Evento 210210
-        public bool RequerCienciaAutomatica(string cnpjDaNossaEmpresa)
-        {
-            // Eventos de cancelamento ou correções da Sefaz não recebem Ciência
-            if (Schema.StartsWith("resEvento") || Schema.StartsWith("procEvento") || Schema.StartsWith("retEnvEvento"))
-                return false;
-
-            if (ChaveAcesso == "SEM_CHAVE_NO_RESUMO" || ChaveAcesso.Length != 44)
-                return false;
-
-            // Extraímos a primeira tag CNPJ/CPF do XML, que indica o Emitente
-            var match = Regex.Match(XmlConteudo, @"<(CNPJ|CPF)>([0-9]+)</\1>");
-            if (match.Success)
+            // Classificação inteligente
+            if (Schema.Contains("procNFe")) TipoDocumento = "NF-e";
+            else if (Schema.Contains("resNFe")) TipoDocumento = "Resumo NF-e";
+            else if (Schema.Contains("procCTe")) TipoDocumento = "CT-e";
+            else if (Schema.Contains("resCTe")) TipoDocumento = "Resumo CT-e";
+            else if (Schema.Contains("Evento", StringComparison.OrdinalIgnoreCase))
             {
-                string docEmitente = match.Groups[2].Value;
+                TipoDocumento = Schema.Contains("CTe", StringComparison.OrdinalIgnoreCase) ? "Evento CT-e" : "Evento NF-e";
 
-                // Se o emitente for a própria Empresa (ex: Emissão própria), não damos Ciência.
-                if (docEmitente == cnpjDaNossaEmpresa)
-                    return false;
+                var matchTpEvento = Regex.Match(XmlConteudo, @"<tpEvento>([0-9]+)</tpEvento>");
+                if (matchTpEvento.Success) TipoEvento = matchTpEvento.Groups[1].Value;
+
+                var matchDescEvento = Regex.Match(XmlConteudo, @"<descEvento>(.*?)</descEvento>");
+                if (matchDescEvento.Success) NomeEvento = matchDescEvento.Groups[1].Value;
             }
-
-            return true;
         }
 
-        private string ExtrairChave(string xml)
+        public bool RequerCienciaAutomatica(string cnpjEmpresa)
         {
-            var match = Regex.Match(xml, @"<chNFe>([0-9]{44})</chNFe>");
-            return match.Success ? match.Groups[1].Value : "SEM_CHAVE_NO_RESUMO";
+            // Apenas Resumos de NF-e sem ciência prévia precisam da manifestação para baixar o XML completo
+            return Schema.Contains("resNFe") && !CienciaEnviada;
         }
+
+        public void MarcarCienciaEnviada() => CienciaEnviada = true;
     }
 }
