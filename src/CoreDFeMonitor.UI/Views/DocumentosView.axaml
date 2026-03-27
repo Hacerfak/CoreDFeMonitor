@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+    x:Class="CoreDFeMonitor.UI.Views.DocumentosView"
+    x:DataType="vm:DocumentosViewModel">
+
+    <Grid ColumnDefinitions="260, *">
+
+        <Border Grid.Column="0" Background="#2C3E50" Padding="0,20">
+            <StackPanel Spacing="10">
+                <TextBlock Text="DFe Monitor" Foreground="White" FontSize="24" FontWeight="Bold"
+                    Margin="25,0,20,35" />
+
+                <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
+                    Padding="25,18" CornerRadius="0" Command="{Binding NavegarDashboardCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="18">
+                        <icons:MaterialIcon Kind="ViewDashboard" Width="22" Height="22"
+                            Foreground="#BDC3C7" />
+                        <TextBlock Text="Visão Geral" VerticalAlignment="Center" FontSize="16" />
+                    </StackPanel>
+                </Button>
+
+                <Button Background="#34495E" Foreground="White" HorizontalAlignment="Stretch"
+                    Padding="25,18" CornerRadius="0">
+                    <StackPanel Orientation="Horizontal" Spacing="18">
+                        <icons:MaterialIcon Kind="FileDocumentMultiple" Width="22" Height="22"
+                            Foreground="White" />
+                        <TextBlock Text="Documentos" VerticalAlignment="Center" FontSize="16" />
+                    </StackPanel>
+                </Button>
+
+                <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
+                    Padding="25,18" CornerRadius="0" Command="{Binding NavegarConfiguracoesCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="18">
+                        <icons:MaterialIcon Kind="Cog" Width="22" Height="22" Foreground="#BDC3C7" />
+                        <TextBlock Text="Configurações" VerticalAlignment="Center" FontSize="16" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Column="1" Background="#F5F5F5" RowDefinitions="Auto, Auto, *">
+
+            <ProgressBar Grid.Row="0" IsIndeterminate="True" Height="4" Foreground="#6200EE"
+                IsVisible="{Binding IsCarregando}" />
+
+            <Border Grid.Row="1" Background="White" CornerRadius="0,0,12,12" Padding="30,20"
+                BoxShadow="0 4 10 0 #0D000000">
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Repositório de DF-es" FontSize="28" FontWeight="SemiBold"
+                        Foreground="#333333" />
+
+                    <Grid ColumnDefinitions="Auto, Auto, Auto, *, Auto" Margin="0,10,0,0">
+                        <DatePicker Grid.Column="0" SelectedDate="{Binding DataInicio}" Width="140"
+                            Margin="0,0,15,0" />
+                        <DatePicker Grid.Column="1" SelectedDate="{Binding DataFim}" Width="140"
+                            Margin="0,0,15,0" />
+
+                        <ComboBox Grid.Column="2" ItemsSource="{Binding ListaTipos}"
+                            SelectedItem="{Binding TipoSelecionado}" Width="140" Margin="0,0,15,0" />
+
+                        <TextBox Grid.Column="3" Text="{Binding FiltroTexto}"
+                            Watermark="Buscar por Chave ou Emitente..." Margin="0,0,15,0"
+                            VerticalAlignment="Center" />
+
+                        <Button Grid.Column="4" Content="Filtrar"
+                            Command="{Binding CarregarDocumentosCommand}"
+                            Background="#6200EE" Foreground="White" Padding="25,8" CornerRadius="8"
+                            FontWeight="Bold" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Background="White" CornerRadius="12" Padding="25" Margin="30"
+                BoxShadow="0 8 20 0 #1A000000">
+                <Grid RowDefinitions="Auto, *">
+
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
+                        <CheckBox Grid.Column="0" Content="Selecionar Todos"
+                            IsChecked="{Binding TodosSelecionados}" FontWeight="SemiBold" />
+
+                        <TextBlock Grid.Column="1" Text="{Binding MensagemAcao}"
+                            Foreground="#4CAF50" FontWeight="SemiBold" VerticalAlignment="Center"
+                            Margin="20,0" />
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                            <Button Content="Manifestar"
+                                Command="{Binding ManifestarSelecionadosCommand}"
+                                Background="#FFF8E1" Foreground="#FFA000" CornerRadius="6"
+                                ToolTip.Tip="Confirmar, Desconhecer..." />
+                            <Button Content="Baixar XML(s)"
+                                Command="{Binding BaixarXmlsSelecionadosCommand}"
+                                Background="#E8F5E9" Foreground="#4CAF50" CornerRadius="6" />
+                            <Button Content="Imprimir DANFE" Background="#F3E5F5"
+                                Foreground="#6200EE" CornerRadius="6" />
+                        </StackPanel>
+                    </Grid>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Documentos}"
+                        AutoGenerateColumns="False" IsReadOnly="False"
+                        CanUserResizeColumns="True" CanUserSortColumns="True"
+                        Background="Transparent" RowBackground="Transparent">
+                        <DataGrid.Columns>
+
+                            <DataGridTemplateColumn Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <CheckBox IsChecked="{Binding IsSelecionado}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Data"
+                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yy HH:mm'}"
+                                Width="130" IsReadOnly="True" />
+
+                            <DataGridTextColumn Header="NSU" Binding="{Binding Dados.Nsu}"
+                                Width="120" IsReadOnly="True" FontWeight="Bold" />
+
+                            <DataGridTextColumn Header="Emitente / Razão Social"
+                                Binding="{Binding Dados.Emitente}" Width="*" IsReadOnly="True"
+                                Foreground="#555555" />
+
+                            <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
+                                Width="120" IsReadOnly="True" FontWeight="SemiBold"
+                                Foreground="#4CAF50" />
+
+                            <DataGridTemplateColumn Header="Situação" Width="150" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <Border Background="#F0F0F0" CornerRadius="4" Padding="8,4"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Dados.SchemaDisplay}"
+                                                FontSize="12" FontWeight="SemiBold"
+                                                Foreground="#6200EE" />
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Grid>
+</UserControl>

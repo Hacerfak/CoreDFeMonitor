@@ -22,7 +22,7 @@ namespace CoreDFeMonitor.Infrastructure
 
             // Regista o DbContext com o SQLite
             services.AddDbContext<DFeMonitorDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath}"));
+                options.UseSqlite($"Data Source={dbPath};Cache=Shared;BusyTimeout=5000;"));
 
             Console.WriteLine($"\n[INFRAESTRUTURA] Banco de Dados SQLite configurado em: {dbPath}\n");
 
@@ -33,6 +33,7 @@ namespace CoreDFeMonitor.Infrastructure
             // Serviços Sefaz / Zeus
             services.AddSingleton<ICertificadoService, CertificadoService>(); // Pode ser Singleton pois não tem estado
             services.AddScoped<ISefazService, SefazService>(); // Scoped pois fará integrações transacionais
+            services.AddScoped<IArmazenamentoXmlService, ArmazenamentoXmlService>();
 
             return services;
         }

@@ -12,6 +12,7 @@ namespace CoreDFeMonitor.Application
         {
             // 1. Registra o nosso Mediator Nativo
             services.AddSingleton<IMediator, NativeMediator>();
+            services.AddSingleton<Services.ZeusBackgroundService>();
 
             // 2. Escaneia o projeto atual buscando todas as classes que implementam IRequestHandler
             var assembly = Assembly.GetExecutingAssembly();

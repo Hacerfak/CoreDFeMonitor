@@ -8,7 +8,8 @@ using CoreDFeMonitor.UI.ViewModels;
 using CoreDFeMonitor.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Avalonia.Platform.Storage;
+using System.Threading.Tasks;
+
 
 namespace CoreDFeMonitor.UI
 {
@@ -25,43 +26,37 @@ namespace CoreDFeMonitor.UI
             {
                 var services = new ServiceCollection();
 
-                // Infraestrutura e Aplicação
                 services.AddLogging(builder => { builder.AddConsole(); builder.SetMinimumLevel(LogLevel.Information); });
                 services.AddInfrastructure();
                 services.AddApplication();
 
-                // Registro dos ViewModels (Eles precisam ser Singleton ou Transient dependendo do caso)
-                // O MainViewModel deve ser Singleton para manter o estado da tela
                 services.AddSingleton<MainViewModel>();
                 services.AddTransient<CadastroEmpresaViewModel>();
                 services.AddTransient<DashboardViewModel>();
                 services.AddTransient<ConfiguracoesViewModel>();
+                services.AddTransient<DocumentosViewModel>(); // A tela que criamos na etapa anterior!
 
                 var serviceProvider = services.BuildServiceProvider();
 
-                // Cria o banco de dados se não existir
                 using (var scope = serviceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<DFeMonitorDbContext>();
                     dbContext.Database.EnsureCreated();
                 }
 
-                // Resgata o Roteador Principal
                 var mainViewModel = serviceProvider.GetRequiredService<MainViewModel>();
 
-                var mainWindow = new MainWindow
-                {
-                    DataContext = mainViewModel
-                };
-
-                // Injeta serviços especiais se necessário (como o StorageProvider para abrir certificados)
-                // Isto é opcional se não usar mais injeção direta da janela, mas mantemos para compatibilidade
-                // services.AddSingleton<Avalonia.Platform.Storage.IStorageProvider>(mainWindow.StorageProvider);
-
+                var mainWindow = new MainWindow { DataContext = mainViewModel };
                 desktop.MainWindow = mainWindow;
 
-                // MAGIA: Inicializa o roteamento (Busca na DB e define a tela)
+                // Inicializa as telas
                 _ = mainViewModel.InicializarAsync();
+
+                // ==============================================================
+                // LIGA O MOTOR DO WORKER EM BACKGROUND (Fogo na máquina!)
+                // ==============================================================
+                var worker = serviceProvider.GetRequiredService<CoreDFeMonitor.Application.Services.ZeusBackgroundService>();
+                _ = Task.Run(() => worker.IniciarAsync()); // Roda numa thread solta, sem travar a UI!
             }
 
             base.OnFrameworkInitializationCompleted();

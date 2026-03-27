@@ -1,5 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:CoreDFeMonitor.UI.Converters"
     xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     xmlns:FluentTheme="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
     x:Class="CoreDFeMonitor.UI.App"
@@ -8,5 +9,11 @@
     <Application.Styles>
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     </Application.Styles>
+
+    <Application.Resources>
+        <converters:BoolToGreenRedConverter x:Key="BoolToGreenRedConverter" />
+        <converters:BoolToCienciaConverter x:Key="BoolToCienciaConverter" />
+    </Application.Resources>
 </Application>

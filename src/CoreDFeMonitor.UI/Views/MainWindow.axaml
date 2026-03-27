@@ -15,6 +15,9 @@
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
             <views:DashboardView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DocumentosViewModel}">
+            <views:DocumentosView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ConfiguracoesViewModel}">
             <views:ConfiguracoesView />
         </DataTemplate>

@@ -20,5 +20,13 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
         {
             return await _context.Documentos.AnyAsync(d => d.EmpresaId == empresaId && d.Nsu == nsu, cancellationToken);
         }
+
+        public async Task<List<Documento>> ObterTodasAsync(CancellationToken cancellationToken = default)
+        {
+            // O AsNoTracking deixa a consulta mais rápida pois é apenas para leitura no Dashboard
+            return await _context.Documentos
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
     }
 }
