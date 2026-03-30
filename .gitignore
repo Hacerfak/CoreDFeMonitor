@@ -39,3 +39,6 @@ TestResults/
 # AppSettings locais
 appsettings.Development.json
 appsettings.Local.json
+
+# Arquivos
+XMLs/**
