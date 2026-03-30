@@ -112,22 +112,30 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Data"
-                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yy HH:mm'}"
-                                Width="130" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Emissão (Local)"
+                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy HH:mm'}"
+                                Width="135" IsReadOnly="True" FontWeight="SemiBold" />
 
                             <DataGridTextColumn Header="NSU" Binding="{Binding Dados.Nsu}"
-                                Width="120" IsReadOnly="True" FontWeight="Bold" />
+                                Width="110" IsReadOnly="True" FontWeight="Bold" />
+
+                            <DataGridTextColumn Header="CNPJ / CPF"
+                                Binding="{Binding Dados.CnpjCpf}" Width="140" IsReadOnly="True"
+                                Foreground="#555555" />
 
                             <DataGridTextColumn Header="Emitente / Razão Social"
                                 Binding="{Binding Dados.Emitente}" Width="*" IsReadOnly="True"
-                                Foreground="#555555" />
+                                Foreground="#333333" />
 
                             <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
                                 Width="120" IsReadOnly="True" FontWeight="SemiBold"
                                 Foreground="#4CAF50" />
 
-                            <DataGridTemplateColumn Header="Situação" Width="150" IsReadOnly="True">
+                            <DataGridTextColumn Header="Status"
+                                Binding="{Binding Dados.SituacaoSefaz}" Width="100"
+                                IsReadOnly="True" Foreground="#FF9800" FontWeight="SemiBold" />
+
+                            <DataGridTemplateColumn Header="Tipo" Width="150" IsReadOnly="True">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
                                         <Border Background="#F0F0F0" CornerRadius="4" Padding="8,4"

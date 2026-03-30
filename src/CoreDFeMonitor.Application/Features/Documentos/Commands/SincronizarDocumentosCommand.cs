@@ -52,7 +52,34 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    _logger.LogInformation(">> Sincronizando NF-es da empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
+                    _logger.LogInformation(">> Sincronizando empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
+
+                    // ==============================================================
+                    // NOVO: AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES (Self-Healing)
+                    // ==============================================================
+                    var todosDocumentos = await _documentoRepository.ObterTodasAsync(cancellationToken);
+                    var pendentes = todosDocumentos
+                        .Where(d => d.EmpresaId == empresa.Id &&
+                                    d.Schema.Contains("resNFe") &&
+                                    !d.CienciaEnviada &&
+                                    (DateTimeOffset.Now - d.DataEmissao).TotalDays <= 10) // <--- O FILTRO AQUI
+                        .ToList();
+
+                    if (pendentes.Any())
+                    {
+                        _logger.LogInformation(">> Tentando recuperar Ciência para {Count} resumos pendentes válidos (menos de 10 dias)...", pendentes.Count);
+                        foreach (var doc in pendentes)
+                        {
+                            var ciencia = await _sefazService.EnviarCienciaOperacaoAsync(empresa, doc.ChaveAcesso);
+                            if (ciencia.Sucesso)
+                            {
+                                doc.MarcarCienciaEnviada();
+                                await _documentoRepository.AtualizarAsync(doc, cancellationToken);
+                            }
+                            await Task.Delay(2000, cancellationToken); // Respiro de 2 segundos para a Sefaz
+                        }
+                    }
+                    // ==============================================================
 
                     var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
 

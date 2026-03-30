@@ -233,22 +233,44 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 var config = CriarConfiguracaoZeus(empresa);
                 using var servicoNfe = new ServicosNFe(config);
 
-                int idLote = 1;
+                // 1. ID de Lote dinâmico para a Sefaz não acusar Lote Duplicado
+                int idLote = Convert.ToInt32(DateTime.Now.ToString("HHmmss"));
                 int seqEvento = 1;
 
                 _logger.LogInformation("Disparando Evento de Ciência (210210) para a Chave {Chave}", chaveAcesso);
 
+                // 2. dhEvento explícito com DateTimeOffset.Now para evitar bugs de relógio
                 var retorno = servicoNfe.RecepcaoEventoManifestacaoDestinatario(
                     idLote, seqEvento, chaveAcesso,
                     NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdCienciaDaOperacao,
-                    empresa.Cnpj);
+                    empresa.Cnpj,
+                    justificativa: null,
+                    dhEvento: DateTimeOffset.Now);
 
-                if (retorno?.Retorno?.retEvento != null && retorno.Retorno.retEvento.Count > 0)
+                if (retorno?.Retorno == null)
+                    return new SefazManifestacaoResult(false, "Sefaz não respondeu ao evento.");
+
+                var retEnv = retorno.Retorno;
+
+                // 3. Captura se o LOTE inteiro foi rejeitado (ex: schema inválido)
+                if (retEnv.cStat != 128)
                 {
-                    var retEv = retorno.Retorno.retEvento[0].infEvento;
-                    if (retEv.cStat == 135 || retEv.cStat == 573)
-                        return new SefazManifestacaoResult(true, $"[{retEv.cStat}] {retEv.xMotivo}");
+                    _logger.LogWarning("Lote Rejeitado [{CStat}]: {Motivo}", retEnv.cStat, retEnv.xMotivo);
+                    return new SefazManifestacaoResult(false, $"Rejeição Lote [{retEnv.cStat}]: {retEnv.xMotivo}");
+                }
 
+                if (retEnv.retEvento != null && retEnv.retEvento.Count > 0)
+                {
+                    var retEv = retEnv.retEvento[0].infEvento;
+
+                    // 135 = Autorizado / 573 = Duplicidade (Já enviou antes por outro sistema)
+                    if (retEv.cStat == 135 || retEv.cStat == 573)
+                    {
+                        _logger.LogInformation("Ciência da Operação VINCULADA! (Chave: {Chave})", chaveAcesso);
+                        return new SefazManifestacaoResult(true, $"[{retEv.cStat}] {retEv.xMotivo}");
+                    }
+
+                    _logger.LogWarning("Rejeição no Evento da Chave {Chave} [{CStat}]: {Motivo}", chaveAcesso, retEv.cStat, retEv.xMotivo);
                     return new SefazManifestacaoResult(false, $"Rejeição Sefaz [{retEv.cStat}]: {retEv.xMotivo}");
                 }
 

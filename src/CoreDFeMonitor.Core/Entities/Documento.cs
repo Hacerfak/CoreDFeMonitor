@@ -1,5 +1,3 @@
-// src/CoreDFeMonitor.Core/Entities/Documento.cs
-using System;
 using System.Text.RegularExpressions;
 
 namespace CoreDFeMonitor.Core.Entities
@@ -13,14 +11,13 @@ namespace CoreDFeMonitor.Core.Entities
         public string XmlConteudo { get; private set; } = string.Empty;
         public string ChaveAcesso { get; private set; } = string.Empty;
         public bool CienciaEnviada { get; private set; }
-        public DateTime DataProcessamento { get; private set; }
-
-        // NOVAS COLUNAS PARA CLASSIFICAÇÃO EXATA
+        public DateTimeOffset DataProcessamento { get; private set; }
+        public DateTimeOffset DataEmissao { get; private set; }
         public string TipoDocumento { get; private set; } = "Desconhecido";
         public string TipoEvento { get; private set; } = string.Empty;
         public string NomeEvento { get; private set; } = string.Empty;
 
-        protected Documento() { } // Para o EF Core
+        protected Documento() { }
 
         public Documento(Guid empresaId, string nsu, string schema, string xmlConteudo)
         {
@@ -29,7 +26,9 @@ namespace CoreDFeMonitor.Core.Entities
             Nsu = nsu;
             Schema = schema;
             XmlConteudo = xmlConteudo;
-            DataProcessamento = DateTime.UtcNow;
+
+            // Define a data de importação como o EXATO MOMENTO da criação
+            DataProcessamento = DateTimeOffset.UtcNow;
             CienciaEnviada = false;
 
             ProcessarMetadadosDoXml();
@@ -37,9 +36,21 @@ namespace CoreDFeMonitor.Core.Entities
 
         private void ProcessarMetadadosDoXml()
         {
-            // Extrai a Chave de Acesso
             var matchChave = Regex.Match(XmlConteudo, @"<ch(?:NFe|CTe)>([0-9]{44})</ch(?:NFe|CTe)>");
             ChaveAcesso = matchChave.Success ? matchChave.Groups[1].Value : "SEM_CHAVE_NO_RESUMO";
+
+            // === EXTRAÇÃO DA DATA DE EMISSÃO ===
+            // Busca dhEmi (Emissão de NFe/CTe) ou dhEvento (Data do Evento) ou dhRecbto (Data do Resumo)
+            var matchData = Regex.Match(XmlConteudo, @"<(?:dhEmi|dhEvento|dhRecbto)>(.*?)</(?:dhEmi|dhEvento|dhRecbto)>");
+            if (matchData.Success && DateTimeOffset.TryParse(matchData.Groups[1].Value, out var dhParsed))
+            {
+                // Agora guardamos o DateTimeOffset exato do XML (Ex: 2026-03-30 10:36:31 -03:00)
+                DataEmissao = dhParsed;
+            }
+            else
+            {
+                DataEmissao = DataProcessamento;
+            }
 
             // Classificação inteligente
             if (Schema.Contains("procNFe")) TipoDocumento = "NF-e";
@@ -60,10 +71,12 @@ namespace CoreDFeMonitor.Core.Entities
 
         public bool RequerCienciaAutomatica(string cnpjEmpresa)
         {
-            // Apenas Resumos de NF-e sem ciência prévia precisam da manifestação para baixar o XML completo
-            return Schema.Contains("resNFe") && !CienciaEnviada;
+            // Apenas Resumos de NF-e sem ciência prévia
+            // E que foram emitidos há menos de 10 dias!
+            return Schema.Contains("resNFe") &&
+                   !CienciaEnviada &&
+                   (DateTimeOffset.Now - DataEmissao).TotalDays <= 10;
         }
-
         public void MarcarCienciaEnviada() => CienciaEnviada = true;
     }
 }

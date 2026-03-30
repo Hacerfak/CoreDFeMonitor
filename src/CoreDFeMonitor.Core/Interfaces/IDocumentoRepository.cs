@@ -7,5 +7,6 @@ namespace CoreDFeMonitor.Core.Interfaces
         Task AdicionarLoteAsync(IEnumerable<Documento> documentos, CancellationToken cancellationToken = default);
         Task<bool> ExisteNsuAsync(Guid empresaId, string nsu, CancellationToken cancellationToken = default);
         Task<List<Documento>> ObterTodasAsync(CancellationToken cancellationToken = default);
+        Task AtualizarAsync(Documento documento, CancellationToken cancellationToken);
     }
 }

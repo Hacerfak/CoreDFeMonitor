@@ -28,5 +28,11 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task AtualizarAsync(Documento documento, CancellationToken cancellationToken)
+        {
+            _context.Documentos.Update(documento);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

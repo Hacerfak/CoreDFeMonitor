@@ -9,6 +9,7 @@ using CoreDFeMonitor.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace CoreDFeMonitor.UI
@@ -41,7 +42,7 @@ namespace CoreDFeMonitor.UI
                 using (var scope = serviceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<DFeMonitorDbContext>();
-                    dbContext.Database.EnsureCreated();
+                    dbContext.Database.Migrate();
                 }
 
                 var mainViewModel = serviceProvider.GetRequiredService<MainViewModel>();

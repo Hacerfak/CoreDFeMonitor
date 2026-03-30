@@ -33,10 +33,11 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var todos = await _documentoRepository.ObterTodasAsync(cancellationToken);
             var query = todos.AsEnumerable();
 
+            // 1. FILTRO DE DATAS - AGORA USANDO A DATA DE EMISSÃO!
             if (request.DataInicio.HasValue)
-                query = query.Where(d => d.DataProcessamento.Date >= request.DataInicio.Value.Date);
+                query = query.Where(d => d.DataEmissao.Date >= request.DataInicio.Value.Date);
             if (request.DataFim.HasValue)
-                query = query.Where(d => d.DataProcessamento.Date <= request.DataFim.Value.Date);
+                query = query.Where(d => d.DataEmissao.Date <= request.DataFim.Value.Date);
 
             // FILTROS ATUALIZADOS PARA SUPORTAR CT-E
             if (request.TipoDocumento == "NF-e")
@@ -49,34 +50,39 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var listaFinal = new List<DocumentoListagemDto>();
             foreach (var doc in query)
             {
-                // Extração inteligente de Emitente (busca especificamente dentro da tag <emit>)
+                // Novo Extrator de CNPJ e Emitente robusto
+                string cnpj = ExtrairCnpjCpf(doc.XmlConteudo);
                 string emitente = ExtrairEmitente(doc.XmlConteudo);
                 string valor = ExtrairTag(doc.XmlConteudo, "vNF", null) ?? ExtrairTag(doc.XmlConteudo, "vTPrest", "0.00") ?? "0.00";
 
-                // Usa o Nome do Evento (se existir) para deixar a Grid bonita!
                 string schemaDisplay = doc.TipoDocumento;
                 if (doc.TipoDocumento.StartsWith("Evento") && !string.IsNullOrEmpty(doc.NomeEvento))
-                {
                     schemaDisplay = doc.NomeEvento;
-                }
 
+                string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, doc.TipoDocumento);
+
+                // Aplica Filtro Texto (agora filtrando também por CNPJ)
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
                     if (!doc.ChaveAcesso.Contains(request.FiltroTexto) &&
+                        !cnpj.Contains(request.FiltroTexto) &&
                         !emitente.Contains(request.FiltroTexto, StringComparison.OrdinalIgnoreCase))
                         continue;
                 }
 
                 listaFinal.Add(new DocumentoListagemDto(
-                    doc.Id, doc.Nsu, doc.ChaveAcesso,
-                    schemaDisplay, emitente, $"R$ {valor}",
-                    doc.DataProcessamento, doc.CienciaEnviada, doc.XmlConteudo
+                    doc.Id, doc.Nsu, doc.ChaveAcesso, schemaDisplay,
+                    cnpj, emitente, $"R$ {valor}", situacao,
+                    doc.DataEmissao, doc.DataProcessamento, doc.CienciaEnviada, doc.XmlConteudo
                 ));
             }
 
             return listaFinal.OrderByDescending(x => x.Nsu).ToList();
         }
 
+        // =========================================================
+        // MÉTODOS EXTRATORES MELHORADOS
+        // =========================================================
         private string? ExtrairTag(string xml, string tag, string? padrao)
         {
             var match = Regex.Match(xml, $"<{tag}>(.*?)</{tag}>");
@@ -85,8 +91,42 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 
         private string ExtrairEmitente(string xml)
         {
-            var match = Regex.Match(xml, @"<emit>.*?<xNome>(.*?)</xNome>.*?</emit>", RegexOptions.Singleline);
+            // Pega o primeiro <xNome> que encontrar (Funciona tanto para Resumo quanto procNFe)
+            var match = Regex.Match(xml, @"<xNome>(.*?)</xNome>");
             return match.Success ? match.Groups[1].Value : "Emitente Desconhecido";
+        }
+
+        private string ExtrairCnpjCpf(string xml)
+        {
+            var match = Regex.Match(xml, @"<(?:CNPJ|CPF)>([0-9]{11,14})</(?:CNPJ|CPF)>");
+            if (match.Success)
+            {
+                string doc = match.Groups[1].Value;
+                return doc.Length == 14 ?
+                    Convert.ToUInt64(doc).ToString(@"00\.000\.000\/0000\-00") :
+                    Convert.ToUInt64(doc).ToString(@"000\.000\.000\-00");
+            }
+            return "-";
+        }
+
+        private string ExtrairSituacaoSefaz(string xml, string tipoDocumento)
+        {
+            if (tipoDocumento.Contains("Resumo") || tipoDocumento == "NF-e")
+            {
+                var match = Regex.Match(xml, @"<cSitNFe>([0-9])</cSitNFe>");
+                if (match.Success)
+                {
+                    return match.Groups[1].Value switch
+                    {
+                        "1" => "Autorizada",
+                        "2" => "Denegada",
+                        "3" => "Cancelada",
+                        _ => "Desconhecida"
+                    };
+                }
+                return "Autorizada"; // procNFe só baixa se autorizada
+            }
+            return "Vinculado"; // Para eventos
         }
 
         private string MapearSchema(string schema)

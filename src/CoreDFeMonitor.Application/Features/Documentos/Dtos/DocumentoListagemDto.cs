@@ -1,6 +1,3 @@
-// src/CoreDFeMonitor.Application/Features/Documentos/Dtos/DocumentoListagemDto.cs
-using System;
-
 namespace CoreDFeMonitor.Application.Features.Documentos.Dtos
 {
     public record DocumentoListagemDto(
@@ -8,9 +5,12 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Dtos
         string Nsu,
         string ChaveAcesso,
         string SchemaDisplay,
+        string CnpjCpf,
         string Emitente,
         string ValorTotal,
-        DateTime DataEmissao,
+        string SituacaoSefaz,
+        DateTimeOffset DataEmissao,
+        DateTimeOffset DataImportacao,
         bool CienciaEnviada,
         string XmlConteudo
     );
