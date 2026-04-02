@@ -34,6 +34,7 @@ namespace CoreDFeMonitor.Infrastructure
             services.AddSingleton<ICertificadoService, CertificadoService>(); // Pode ser Singleton pois não tem estado
             services.AddScoped<ISefazService, SefazService>(); // Scoped pois fará integrações transacionais
             services.AddScoped<IArmazenamentoXmlService, ArmazenamentoXmlService>();
+            services.AddSingleton<INotificacaoDesktopService, NotificacaoDesktopService>();
 
             return services;
         }

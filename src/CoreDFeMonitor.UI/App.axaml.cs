@@ -33,7 +33,7 @@ namespace CoreDFeMonitor.UI
 
                 services.AddSingleton<MainViewModel>();
                 services.AddTransient<CadastroEmpresaViewModel>();
-                services.AddTransient<DashboardViewModel>();
+                services.AddSingleton<DashboardViewModel>();
                 services.AddTransient<ConfiguracoesViewModel>();
                 services.AddTransient<DocumentosViewModel>(); // A tela que criamos na etapa anterior!
 

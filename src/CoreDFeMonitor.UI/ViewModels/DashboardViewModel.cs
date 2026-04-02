@@ -8,6 +8,8 @@ using CoreDFeMonitor.Application.Features.Documentos.Commands;
 using CoreDFeMonitor.Application.Features.Documentos.Dtos;
 using CoreDFeMonitor.Application.Features.Documentos.Queries;
 using CoreDFeMonitor.Core.Mediator;
+using CoreDFeMonitor.Application.Services;
+using Avalonia.Threading;
 
 namespace CoreDFeMonitor.UI.ViewModels
 {
@@ -15,6 +17,7 @@ namespace CoreDFeMonitor.UI.ViewModels
     {
         private readonly IMediator _mediator;
         private readonly MainViewModel _mainViewModel;
+        public ISyncStatusMonitor SyncStatus { get; }
 
         [ObservableProperty] private int _totalDocumentosMes = 0;
         [ObservableProperty] private int _totalDocumentosHoje = 0;
@@ -27,10 +30,22 @@ namespace CoreDFeMonitor.UI.ViewModels
 
         public ObservableCollection<DocumentoDto> DocumentosRecentes { get; } = new();
 
-        public DashboardViewModel(IMediator mediator, MainViewModel mainViewModel)
+        public DashboardViewModel(IMediator mediator, MainViewModel mainViewModel, ISyncStatusMonitor syncStatus)
         {
             _mediator = mediator;
             _mainViewModel = mainViewModel;
+            SyncStatus = syncStatus;
+
+            SyncStatus.SincronizacaoConcluida += OnSincronizacaoConcluida;
+        }
+
+        private void OnSincronizacaoConcluida(object? sender, EventArgs e)
+        {
+            // Pede à Thread principal da Interface Gráfica (UI) para recarregar os dados
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await CarregarDadosAsync();
+            });
         }
 
         public async Task CarregarDadosAsync()
@@ -60,22 +75,44 @@ namespace CoreDFeMonitor.UI.ViewModels
             if (!PodeAtualizar) return;
 
             PodeAtualizar = false;
-            TextoBotaoAtualizar = "Buscando...";
+            TextoBotaoAtualizar = "Sincronizando...";
 
-            // FORÇA A SINCRONIZAÇÃO MANUAL
-            bool rodouComSucesso = await _mediator.Send(new SincronizarDocumentosCommand());
-
-            // Depois que baixar, recarrega as tabelas da tela
-            await CarregarDadosAsync();
-
-            if (!rodouComSucesso)
+            // 1. Proteção: Se o Worker automático já estiver rodando neste exato segundo, ignora o clique!
+            if (SyncStatus.EmExecucao)
             {
-                TextoBotaoAtualizar = "Já em Andamento!";
-                await Task.Delay(3000);
+                return;
             }
 
-            // INICIA O COOLDOWN DE 60 SEGUNDOS SEM TRAVAR A TELA
-            _ = IniciarCooldownAsync();
+            try
+            {
+                // 2. Liga a barra de progresso e muda o texto no Dashboard
+                SyncStatus.IniciarSincronizacao("Sincronização manual iniciada pelo usuário...");
+
+                // 3. Dispara o motor da Sefaz
+                // FORÇA A SINCRONIZAÇÃO MANUAL
+                bool executouComSucesso = await _mediator.Send(new SincronizarDocumentosCommand());
+
+                if (!executouComSucesso)
+                {
+                    SyncStatus.AtualizarMensagem("O sincronização já estava ocorrendo.");
+                }
+
+                // Depois que baixar, recarrega as tabelas da tela
+                await CarregarDadosAsync();
+
+                // INICIA O COOLDOWN DE 60 SEGUNDOS SEM TRAVAR A TELA
+                _ = IniciarCooldownAsync();
+            }
+            catch (Exception ex)
+            {
+                SyncStatus.AtualizarMensagem($"Erro na sincronização manual: {ex.Message}");
+            }
+            finally
+            {
+                // 4. Desliga a barra de progresso, atualiza a "Última Sincronização" para AGORA
+                // e joga a próxima para +30 minutos visualmente.
+                SyncStatus.FinalizarSincronizacao("Sincronização manual concluída.", DateTimeOffset.Now.AddMinutes(2));
+            }
         }
 
         private async Task IniciarCooldownAsync()

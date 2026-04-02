@@ -1,8 +1,3 @@
-// src/CoreDFeMonitor.Application/Services/ZeusBackgroundService.cs
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using CoreDFeMonitor.Application.Features.Documentos.Commands;
 using CoreDFeMonitor.Core.Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,11 +8,13 @@ namespace CoreDFeMonitor.Application.Services
     public class ZeusBackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly ISyncStatusMonitor _syncStatus;
         private readonly ILogger<ZeusBackgroundService> _logger;
 
-        public ZeusBackgroundService(IServiceProvider serviceProvider, ILogger<ZeusBackgroundService> logger)
+        public ZeusBackgroundService(IServiceProvider serviceProvider, ISyncStatusMonitor syncStatus, ILogger<ZeusBackgroundService> logger)
         {
             _serviceProvider = serviceProvider;
+            _syncStatus = syncStatus;
             _logger = logger;
         }
 
@@ -57,7 +54,12 @@ namespace CoreDFeMonitor.Application.Services
                         }
 
                         // Pausa de 30 minutos (Padrão Sefaz para Background)
-                        await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                        var tempoEspera = TimeSpan.FromMinutes(2);
+                        _syncStatus.FinalizarSincronizacao("Aguardando próxima sincronização na Sefaz.", DateTimeOffset.Now.Add(tempoEspera));
+
+                        await Task.Delay(tempoEspera, stoppingToken);
+
+                        _syncStatus.IniciarSincronizacao("Iniciando nova sincronização na Sefaz...");
                     }
                 }
                 catch (IOException)

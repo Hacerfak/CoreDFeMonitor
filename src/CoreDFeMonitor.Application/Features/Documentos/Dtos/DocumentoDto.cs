@@ -8,7 +8,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Dtos
         string Nsu,
         string ChaveAcesso,
         string SchemaDisplay, // Ex: NFe Proc, Resumo NFe, Cancelamento
-        DateTimeOffset DataProcessamento,
+        DateTimeOffset DataEmissao,
         bool CienciaEnviada
     );
 }

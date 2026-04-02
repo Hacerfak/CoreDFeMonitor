@@ -1,10 +1,7 @@
-// src/CoreDFeMonitor.Application/Features/Documentos/Commands/SincronizarDocumentosCommand.cs
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Interfaces;
 using CoreDFeMonitor.Core.Mediator;
+using CoreDFeMonitor.Application.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CoreDFeMonitor.Application.Features.Documentos.Commands
@@ -16,7 +13,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
         private readonly IEmpresaRepository _empresaRepository;
         private readonly IDocumentoRepository _documentoRepository;
         private readonly ISefazService _sefazService;
-        private readonly IArmazenamentoXmlService _armazenamentoXmlService; // NOVO
+        private readonly ISyncStatusMonitor _syncStatus;
+        private readonly IArmazenamentoXmlService _armazenamentoXmlService;
+        private readonly INotificacaoDesktopService _notificacao;
         private readonly ILogger<SincronizarDocumentosCommandHandler> _logger;
 
         // TRAVA DE CONCORRÊNCIA: Garante que apenas 1 sincronização rode por vez em todo o sistema.
@@ -26,13 +25,17 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
             IEmpresaRepository empresaRepository,
             IDocumentoRepository documentoRepository,
             ISefazService sefazService,
-            IArmazenamentoXmlService armazenamentoXmlService, // NOVO
+            ISyncStatusMonitor syncStatus,
+            IArmazenamentoXmlService armazenamentoXmlService,
+            INotificacaoDesktopService notificacao,
             ILogger<SincronizarDocumentosCommandHandler> logger)
         {
             _empresaRepository = empresaRepository;
             _documentoRepository = documentoRepository;
             _sefazService = sefazService;
-            _armazenamentoXmlService = armazenamentoXmlService; // NOVO
+            _syncStatus = syncStatus;
+            _armazenamentoXmlService = armazenamentoXmlService;
+            _notificacao = notificacao;
             _logger = logger;
         }
 
@@ -46,11 +49,14 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
             try
             {
+                int totalDocumentosNovosBaixados = 0;
                 var empresas = await _empresaRepository.ObterTodasAsync(cancellationToken);
 
                 foreach (var empresa in empresas)
                 {
                     if (cancellationToken.IsCancellationRequested) break;
+
+                    _syncStatus.AtualizarMensagem($"Sincronizando NF-e: {empresa.RazaoSocial}...");
 
                     _logger.LogInformation(">> Sincronizando empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
 
@@ -114,6 +120,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         if (novosDocumentos.Count > 0)
                         {
                             await _documentoRepository.AdicionarLoteAsync(novosDocumentos, cancellationToken);
+                            totalDocumentosNovosBaixados += novosDocumentos.Count;
                         }
 
                         if (empresa.UltimoNsu != resultado.UltimoNsuRetornado)
@@ -124,6 +131,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                     }
 
                     // === NOVO: BUSCA DE CT-E ===
+                    _syncStatus.AtualizarMensagem($"Sincronizando CT-e: {empresa.RazaoSocial}...");
                     _logger.LogInformation(">> Sincronizando CT-es da empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsuCte);
 
                     var resultadoCte = await _sefazService.BaixarDocumentosCteAsync(empresa);
@@ -158,7 +166,10 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         }
 
                         if (novosCtes.Count > 0)
+                        {
                             await _documentoRepository.AdicionarLoteAsync(novosCtes, cancellationToken);
+                            totalDocumentosNovosBaixados += novosCtes.Count;
+                        }
 
                         if (empresa.UltimoNsuCte != resultadoCte.UltimoNsuRetornado)
                         {
@@ -169,6 +180,11 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
                     // Intervalo de segurança da SEFAZ
                     await Task.Delay(5000, cancellationToken);
+                }
+
+                if (totalDocumentosNovosBaixados > 0)
+                {
+                    _notificacao.Exibir("Core DF-e Monitor", $"Sincronização concluída! {totalDocumentosNovosBaixados} novos documentos recebidos da Sefaz.");
                 }
 
                 return true;

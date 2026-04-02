@@ -1,8 +1,3 @@
-// src/CoreDFeMonitor.Application/Features/Documentos/Queries/ObterUltimosDocumentosQuery.cs
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using CoreDFeMonitor.Application.Features.Documentos.Dtos;
 using CoreDFeMonitor.Core.Interfaces;
 using CoreDFeMonitor.Core.Mediator;
@@ -26,7 +21,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 
             // Pega os 5 mais recentes baixados
             var ultimos = documentos
-                .OrderByDescending(d => d.DataProcessamento)
+                .OrderByDescending(d => d.DataEmissao)
                 .Take(5)
                 .Select(d =>
                 {
@@ -44,7 +39,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                         d.Nsu,
                         d.ChaveAcesso,
                         schemaDisplay,
-                        d.DataProcessamento,
+                        d.DataEmissao,
                         d.CienciaEnviada);
                 })
                 .ToList();

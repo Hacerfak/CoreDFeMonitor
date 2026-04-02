@@ -1,6 +1,7 @@
 // src/CoreDFeMonitor.Application/DependencyInjection.cs
 using CoreDFeMonitor.Application.Mediator;
 using CoreDFeMonitor.Core.Mediator;
+using CoreDFeMonitor.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -12,7 +13,8 @@ namespace CoreDFeMonitor.Application
         {
             // 1. Registra o nosso Mediator Nativo
             services.AddSingleton<IMediator, NativeMediator>();
-            services.AddSingleton<Services.ZeusBackgroundService>();
+            services.AddSingleton<ZeusBackgroundService>();
+            services.AddSingleton<ISyncStatusMonitor, SyncStatusMonitor>();
 
             // 2. Escaneia o projeto atual buscando todas as classes que implementam IRequestHandler
             var assembly = Assembly.GetExecutingAssembly();
