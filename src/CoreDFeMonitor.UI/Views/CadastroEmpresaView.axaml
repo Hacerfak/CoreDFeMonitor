@@ -53,7 +53,8 @@
                                 Foreground="#555555" FontSize="13" />
                             <Grid ColumnDefinitions="*, Auto">
                                 <TextBox Grid.Column="0" Text="{Binding CaminhoCertificado}"
-                                    Watermark="Nenhum arquivo selecionado..." IsReadOnly="True" />
+                                    PlaceholderText="Nenhum arquivo selecionado..."
+                                    IsReadOnly="True" />
                                 <Button Grid.Column="1"
                                     Command="{Binding SelecionarCertificadoCommand}"
                                     Background="#E0E0E0" Margin="8,0,0,0"
@@ -69,7 +70,7 @@
                                 <TextBlock Text="Senha do Certificado" FontWeight="SemiBold"
                                     Foreground="#555555" FontSize="13" />
                                 <TextBox Text="{Binding SenhaCertificado}" PasswordChar="•"
-                                    Watermark="Digite a senha..." />
+                                    PlaceholderText="Digite a senha..." />
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Spacing="5">
@@ -166,12 +167,13 @@
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="5">
                                 <TextBlock Text="Telefone" FontWeight="SemiBold"
                                     Foreground="#555555" FontSize="13" />
-                                <TextBox Text="{Binding Telefone}" Watermark="(00) 00000-0000" />
+                                <TextBox Text="{Binding Telefone}" PlaceholderText="(00) 00000-0000" />
                             </StackPanel>
                             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="5">
                                 <TextBlock Text="E-mail" FontWeight="SemiBold" Foreground="#555555"
                                     FontSize="13" />
-                                <TextBox Text="{Binding Email}" Watermark="contato@empresa.com" />
+                                <TextBox Text="{Binding Email}"
+                                    PlaceholderText="contato@empresa.com" />
                             </StackPanel>
                         </Grid>
 

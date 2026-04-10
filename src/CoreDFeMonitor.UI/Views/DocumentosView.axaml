@@ -61,7 +61,7 @@
                             SelectedItem="{Binding TipoSelecionado}" Width="140" Margin="0,0,15,0" />
 
                         <TextBox Grid.Column="3" Text="{Binding FiltroTexto}"
-                            Watermark="Buscar por Chave ou Emitente..." Margin="0,0,15,0"
+                            PlaceholderText="Buscar por Chave ou Emitente..." Margin="0,0,15,0"
                             VerticalAlignment="Center" />
 
                         <Button Grid.Column="4" Content="Filtrar"
