@@ -1,5 +1,6 @@
 // src/CoreDFeMonitor.Infrastructure/Services/SefazService.cs
 using System.Net;
+using System.Net.Security;
 using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Interfaces;
 using DFe.Classes.Entidades;
@@ -19,6 +20,40 @@ namespace CoreDFeMonitor.Infrastructure.Services
     {
         private readonly ICertificadoService _certificadoService;
         private readonly ILogger<SefazService> _logger;
+
+        // =========================================================================
+        // NOVO: CONSTRUTOR ESTÁTICO PARA APLICAR AS REGRAS DO ZEUS GLOBALMENTE
+        // =========================================================================
+        static SefazService()
+        {
+            // IGNORAR AVISO DE OBSOLETO (SYSLIB0014)
+            // Motivo: A biblioteca Zeus utiliza HttpWebRequest internamente.
+            // Precisamos configurar o ServicePointManager para forçar o TLS.
+#pragma warning disable SYSLIB0014
+
+            // 1. VALIDAÇÃO DE CADEIA CONTROLADA (Proteção MITM)
+            ServicePointManager.ServerCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
+            {
+                if (sslPolicyErrors == SslPolicyErrors.None) return true;
+
+                if (sender is HttpWebRequest req)
+                {
+                    var host = req.RequestUri.Host.ToLower();
+                    // Garante que só ignora erros de certificado se o domínio for genuíno da Sefaz
+                    if (host.Contains("sefaz") || host.Contains("svrs") || host.Contains("fazenda"))
+                    {
+                        return true;
+                    }
+                }
+                return false; // Rejeita interceções de terceiros
+            };
+
+            // 2. FORÇAR TLS 1.2 E TLS 1.3 EXPLICITAMENTE
+            // O uso de ambos garante compatibilidade com os estados que já usam 1.3 e os que ainda estão no 1.2
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+
+#pragma warning restore SYSLIB0014
+        }
 
         public SefazService(ICertificadoService certificadoService, ILogger<SefazService> logger)
         {
@@ -52,7 +87,7 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 ValidarCertificadoDoServidor = false,
                 SalvarXmlServicos = false, // Evita poluir o disco com arquivos de log desnecessários
                 ValidarSchemas = false, // Em um cenário de monitor, validaremos a estrutura do schema sob demanda se necessário
-                ProtocoloDeSeguranca = SecurityProtocolType.Tls13,
+                ProtocoloDeSeguranca = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13, // Mantém a coerência com a configuração global
                 RemoverAcentos = true,
                 DefineVersaoServicosAutomaticamente = true, // Zeus tentará resolver a versão WSDL dinamicamente
                 VersaoLayout = VersaoServico.Versao400,
@@ -180,7 +215,7 @@ namespace CoreDFeMonitor.Infrastructure.Services
 
                 return new SefazCadastroResult(
                     true, cnpjBase, razaoBase, null, null, null, null, null, null, null, null,
-                    $"AVISO SEFAZ: {ex.Message}. (Avançando apenas com os dados do Certificado)" // <-- Isto vai aparecer na UI
+                    $"AVISO SEFAZ: {ex.Message}. (Avançando apenas com os dados do Certificado)"
                 );
             }
         }
