@@ -8,7 +8,6 @@ using DFe.Classes.Flags;
 using DFe.Utils;
 using NFe.Utils;
 using NFe.Servicos;
-using CTe.Servicos.DistribuicaoDFe;
 using NFe.Classes.Informacoes.Identificacao.Tipos;
 using NFe.Classes.Servicos.ConsultaCadastro;
 using System.Text.RegularExpressions;
@@ -315,70 +314,6 @@ namespace CoreDFeMonitor.Infrastructure.Services
             {
                 _logger.LogError(ex, "Erro ao emitir Ciência: {Message}", ex.Message);
                 return new SefazManifestacaoResult(false, $"Erro Local: {ex.Message}");
-            }
-        }
-
-        // ==========================================================
-        // CT-E
-        // ==========================================================
-        public async Task<SefazDistribuicaoResult> BaixarDocumentosCteAsync(Empresa empresa)
-        {
-            var documentosLidos = new List<DocumentoZip>();
-            string nsuAtual = string.IsNullOrEmpty(empresa.UltimoNsuCte) ? "000000000000000" : empresa.UltimoNsuCte.PadLeft(15, '0');
-
-            try
-            {
-                if (!Enum.TryParse(empresa.Uf.ToUpper(), out Estado estadoSefaz))
-                    return new SefazDistribuicaoResult(false, nsuAtual, "UF inválida.", documentosLidos);
-
-                var configCertificado = new ConfiguracaoCertificado()
-                {
-                    TipoCertificado = TipoCertificado.A1ByteArray,
-                    ArrayBytesArquivo = File.ReadAllBytes(empresa.CaminhoCertificado!),
-                    Senha = empresa.SenhaCertificado ?? string.Empty,
-                    SignatureMethodSignedXml = "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
-                    DigestMethodReference = "http://www.w3.org/2000/09/xmldsig#sha1"
-                };
-
-                var configCte = new CTe.Classes.ConfiguracaoServico
-                {
-                    tpAmb = TipoAmbiente.Producao,
-                    cUF = estadoSefaz,
-                    ConfiguracaoCertificado = configCertificado,
-                    TimeOut = 30000,
-
-                    // CORREÇÃO 3: Desliga a validação E aponta o diretório para evitar a Exception
-                    IsValidaSchemas = false,
-                    DiretorioSchemas = AppDomain.CurrentDomain.BaseDirectory
-                };
-
-                var servicoCte = new ServicoCTeDistribuicaoDFe(configCte);
-                string ufArg = ((int)estadoSefaz).ToString();
-
-                var retorno = servicoCte.CTeDistDFeInteresse(ufArg, empresa.Cnpj, nsuAtual);
-
-                if (retorno?.Retorno == null)
-                    return new SefazDistribuicaoResult(false, nsuAtual, "Sefaz CT-e não respondeu.", documentosLidos);
-
-                var ret = retorno.Retorno;
-
-                if (ret.cStat == 138 && ret.loteDistDFeInt != null)
-                {
-                    foreach (var docZip in ret.loteDistDFeInt)
-                    {
-                        var xmlDescompactado = Compressao.Unzip(docZip.XmlNfe);
-                        documentosLidos.Add(new DocumentoZip(docZip.NSU.ToString(), docZip.schema, xmlDescompactado));
-                    }
-                    _logger.LogInformation("Baixados {Count} novos CT-es da Sefaz para {CNPJ}.", documentosLidos.Count, empresa.Cnpj);
-                }
-
-                string nsuParaGravar = string.IsNullOrEmpty(ret.ultNSU.ToString()) ? nsuAtual : ret.ultNSU.ToString();
-                return new SefazDistribuicaoResult(true, nsuParaGravar, ret.xMotivo ?? "", documentosLidos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Falha na distribuição de CT-e: {Message}", ex.Message);
-                return new SefazDistribuicaoResult(false, nsuAtual, $"Falha Sefaz CT-e: {ex.Message}", documentosLidos);
             }
         }
     }

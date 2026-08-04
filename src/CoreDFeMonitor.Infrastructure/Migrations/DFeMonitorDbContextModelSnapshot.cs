@@ -15,7 +15,7 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
 
             modelBuilder.Entity("CoreDFeMonitor.Core.Entities.Documento", b =>
                 {
@@ -37,12 +37,14 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("DataProcessamento")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("EmitenteId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NomeEvento")
                         .IsRequired()
-                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Nsu")
@@ -56,12 +58,10 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
 
                     b.Property<string>("TipoDocumento")
                         .IsRequired()
-                        .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TipoEvento")
                         .IsRequired()
-                        .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("XmlConteudo")
@@ -70,10 +70,33 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EmitenteId");
+
                     b.HasIndex("EmpresaId", "Nsu")
                         .IsUnique();
 
                     b.ToTable("Documentos", (string)null);
+                });
+
+            modelBuilder.Entity("CoreDFeMonitor.Core.Entities.Emitente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Cnpj")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RazaoSocial")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Emitentes", (string)null);
                 });
 
             modelBuilder.Entity("CoreDFeMonitor.Core.Entities.Empresa", b =>
@@ -83,15 +106,12 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Bairro")
-                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CaminhoCertificado")
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Cep")
-                        .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Cnpj")
@@ -103,58 +123,41 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Complemento")
-                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("DataCadastro")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("InscricaoEstadual")
-                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Logradouro")
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NomeMunicipio")
-                        .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Numero")
-                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RazaoSocial")
                         .IsRequired()
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SenhaCertificado")
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Telefone")
-                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Uf")
                         .IsRequired()
-                        .HasMaxLength(2)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UltimoNsu")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(15)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("000000000000000");
-
-                    b.Property<string>("UltimoNsuCte")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(15)
@@ -167,6 +170,22 @@ namespace CoreDFeMonitor.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Empresas", (string)null);
+                });
+
+            modelBuilder.Entity("CoreDFeMonitor.Core.Entities.Documento", b =>
+                {
+                    b.HasOne("CoreDFeMonitor.Core.Entities.Emitente", "Emitente")
+                        .WithMany("Documentos")
+                        .HasForeignKey("EmitenteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Emitente");
+                });
+
+            modelBuilder.Entity("CoreDFeMonitor.Core.Entities.Emitente", b =>
+                {
+                    b.Navigation("Documentos");
                 });
 #pragma warning restore 612, 618
         }

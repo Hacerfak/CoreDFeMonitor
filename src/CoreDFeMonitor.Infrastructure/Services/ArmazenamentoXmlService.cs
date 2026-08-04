@@ -1,8 +1,4 @@
-// src/CoreDFeMonitor.Infrastructure/Services/ArmazenamentoXmlService.cs
-using System;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using CoreDFeMonitor.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -21,14 +17,12 @@ namespace CoreDFeMonitor.Infrastructure.Services
         {
             try
             {
-                // Descobre quem é o emitente
                 string cnpjEmitente = ExtrairCnpjEmitente(xmlConteudo);
                 string tipoDiretorio = (cnpjEmitente == cnpjEmpresa) ? "Saidas" : "Entradas";
-
                 string subPasta = "Outros";
                 string nomeArquivo = $"{chaveAcesso}.xml";
 
-                // LÓGICA RÍGIDA DE SEPARAÇÃO E NOMEAÇÃO
+                // LÓGICA RÍGIDA DE SEPARAÇÃO APENAS PARA NF-E E EVENTOS
                 if (schema.Contains("procNFe"))
                 {
                     subPasta = "NFe_Completas";
@@ -39,23 +33,11 @@ namespace CoreDFeMonitor.Infrastructure.Services
                     subPasta = "NFe_Resumos";
                     nomeArquivo = $"NFE_RESUMO_{chaveAcesso}.xml";
                 }
-                else if (schema.Contains("procCTe"))
-                {
-                    subPasta = "CTe_Completos";
-                    nomeArquivo = $"CTE_COMPLETO_{chaveAcesso}.xml";
-                }
-                else if (schema.Contains("resCTe"))
-                {
-                    subPasta = "CTe_Resumos";
-                    nomeArquivo = $"CTE_RESUMO_{chaveAcesso}.xml";
-                }
                 else if (schema.Contains("Evento", StringComparison.OrdinalIgnoreCase))
                 {
                     subPasta = "Eventos";
                     string tpEvento = ExtrairTag(xmlConteudo, "tpEvento", "000000") ?? "000000";
                     string nSeqEvento = ExtrairTag(xmlConteudo, "nSeqEvento", "1") ?? "1";
-
-                    // Adiciona o Tipo de Evento e Sequência no nome para evitar sobrescrita!
                     nomeArquivo = $"EVENTO_{tpEvento}_SEQ{nSeqEvento}_{chaveAcesso}.xml";
                 }
 
@@ -69,8 +51,8 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 }
 
                 string caminhoFinal = Path.Combine(caminhoBase, nomeArquivo);
-
                 await File.WriteAllTextAsync(caminhoFinal, xmlConteudo);
+
                 _logger.LogInformation("XML armazenado estruturalmente: {Caminho}", caminhoFinal);
             }
             catch (Exception ex)

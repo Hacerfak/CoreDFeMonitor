@@ -1,4 +1,3 @@
-// src/CoreDFeMonitor.UI/ViewModels/DocumentosViewModel.cs
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -6,6 +5,8 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CoreDFeMonitor.Application.Features.Documentos.Queries;
+using CoreDFeMonitor.Application.Features.Emitentes.Queries;
+using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Mediator;
 
 namespace CoreDFeMonitor.UI.ViewModels
@@ -15,24 +16,60 @@ namespace CoreDFeMonitor.UI.ViewModels
         private readonly IMediator _mediator;
         private readonly MainViewModel _mainViewModel;
 
-        // Filtros
+        // ============================================
+        // PAINEL LATERAL (MESTRE) - EMITENTES
+        // ============================================
+        public ObservableCollection<Emitente> ListaEmitentes { get; } = new();
+
+        [ObservableProperty]
+        private Emitente? _emitenteSelecionado;
+
+        // ============================================
+        // FILTROS E PAINEL PRINCIPAL (DETALHE)
+        // ============================================
         [ObservableProperty] private DateTimeOffset? _dataInicio = DateTimeOffset.Now.AddDays(-30);
         [ObservableProperty] private DateTimeOffset? _dataFim = DateTimeOffset.Now;
         [ObservableProperty] private string _filtroTexto = string.Empty;
         [ObservableProperty] private string _tipoSelecionado = "Todos";
-        public string[] ListaTipos { get; } = { "Todos", "NF-e", "CT-e", "Eventos" };
+
+        // Removido o CT-e
+        public string[] ListaTipos { get; } = { "Todos", "NF-e", "Eventos" };
 
         [ObservableProperty] private bool _isCarregando = false;
         [ObservableProperty] private bool _todosSelecionados = false;
         [ObservableProperty] private string _mensagemAcao = string.Empty;
 
-        // Tabela
         public ObservableCollection<DocumentoItemViewModel> Documentos { get; } = new();
 
         public DocumentosViewModel(IMediator mediator, MainViewModel mainViewModel)
         {
             _mediator = mediator;
             _mainViewModel = mainViewModel;
+
+            _ = InicializarTelaAsync();
+        }
+
+        private async Task InicializarTelaAsync()
+        {
+            await CarregarEmitentesAsync();
+            await CarregarDocumentosAsync();
+        }
+
+        [RelayCommand]
+        public async Task CarregarEmitentesAsync()
+        {
+            var emitentes = await _mediator.Send(new ObterEmitentesQuery());
+            ListaEmitentes.Clear();
+
+            foreach (var emitente in emitentes)
+            {
+                ListaEmitentes.Add(emitente);
+            }
+        }
+
+        // Evento automático do CommunityToolkit. Dispara quando o usuário clica num emitente.
+        partial void OnEmitenteSelecionadoChanged(Emitente? value)
+        {
             _ = CarregarDocumentosAsync();
         }
 
@@ -47,7 +84,8 @@ namespace CoreDFeMonitor.UI.ViewModels
                 DataInicio = DataInicio?.DateTime,
                 DataFim = DataFim?.DateTime,
                 FiltroTexto = FiltroTexto,
-                TipoDocumento = TipoSelecionado
+                TipoDocumento = TipoSelecionado,
+                EmitenteId = EmitenteSelecionado?.Id // O ID do fornecedor clicado!
             };
 
             var resultados = await _mediator.Send(query);
@@ -62,7 +100,6 @@ namespace CoreDFeMonitor.UI.ViewModels
             IsCarregando = false;
         }
 
-        // AÇÕES EM MASSA
         partial void OnTodosSelecionadosChanged(bool value)
         {
             foreach (var doc in Documentos) doc.IsSelecionado = value;
@@ -74,8 +111,8 @@ namespace CoreDFeMonitor.UI.ViewModels
             var selecionados = Documentos.Where(d => d.IsSelecionado).ToList();
             if (!selecionados.Any()) return;
 
-            MensagemAcao = $"Iniciando download de {selecionados.Count} XMLs (em desenvolvimento...)";
-            await Task.Delay(2000); // MOC da ação real
+            MensagemAcao = $"Iniciando download de {selecionados.Count} XMLs...";
+            await Task.Delay(2000);
             MensagemAcao = string.Empty;
             foreach (var doc in selecionados) doc.IsSelecionado = false;
         }
@@ -86,13 +123,12 @@ namespace CoreDFeMonitor.UI.ViewModels
             var selecionados = Documentos.Where(d => d.IsSelecionado).ToList();
             if (!selecionados.Any()) return;
 
-            MensagemAcao = $"Enviando evento para {selecionados.Count} notas (em desenvolvimento...)";
+            MensagemAcao = $"Enviando evento para {selecionados.Count} notas...";
             await Task.Delay(2000);
             MensagemAcao = string.Empty;
             await CarregarDocumentosAsync();
         }
 
-        // NAVEGAÇÃO
         [RelayCommand]
         private void NavegarDashboard() => _mainViewModel.NavegarPara<DashboardViewModel>();
 

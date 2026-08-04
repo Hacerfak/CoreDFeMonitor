@@ -23,8 +23,8 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
 
         public async Task<List<Documento>> ObterTodasAsync(CancellationToken cancellationToken = default)
         {
-            // O AsNoTracking deixa a consulta mais rápida pois é apenas para leitura no Dashboard
             return await _context.Documentos
+                .Include(d => d.Emitente)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }

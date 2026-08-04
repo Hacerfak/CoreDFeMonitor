@@ -1,5 +1,3 @@
-// src/CoreDFeMonitor.Core/Interfaces/ISefazService.cs
-using System.Threading.Tasks;
 using CoreDFeMonitor.Core.Entities;
 
 namespace CoreDFeMonitor.Core.Interfaces
@@ -27,8 +25,9 @@ namespace CoreDFeMonitor.Core.Interfaces
     {
         bool ValidarConfiguracao(Empresa empresa);
         Task<SefazCadastroResult> ConsultarCadastroAsync(string uf, string caminhoCertificado, string senha);
+
+        // Apenas a distribuição de NF-e e eventos
         Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa);
-        Task<SefazDistribuicaoResult> BaixarDocumentosCteAsync(Empresa empresa);
         Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso);
     }
 }

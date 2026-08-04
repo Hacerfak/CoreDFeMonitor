@@ -1,4 +1,3 @@
-// src/CoreDFeMonitor.Application/Features/Documentos/Queries/ObterDocumentosQuery.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +16,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
         public DateTime? DataFim { get; set; }
         public string FiltroTexto { get; set; } = string.Empty;
         public string TipoDocumento { get; set; } = "Todos";
+
+        // NOVO: Propriedade para filtrar pelo clique no painel lateral
+        public int? EmitenteId { get; set; }
     }
 
     public class ObterDocumentosQueryHandler : IRequestHandler<ObterDocumentosQuery, List<DocumentoListagemDto>>
@@ -33,35 +35,39 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var todos = await _documentoRepository.ObterTodasAsync(cancellationToken);
             var query = todos.AsEnumerable();
 
-            // 1. FILTRO DE DATAS - AGORA USANDO A DATA DE EMISSÃO!
+            // 1. FILTRO DE EMITENTE
+            if (request.EmitenteId.HasValue && request.EmitenteId.Value > 0)
+                query = query.Where(d => d.EmitenteId == request.EmitenteId.Value);
+
+            // 2. FILTRO DE DATAS
             if (request.DataInicio.HasValue)
                 query = query.Where(d => d.DataEmissao.Date >= request.DataInicio.Value.Date);
+
             if (request.DataFim.HasValue)
                 query = query.Where(d => d.DataEmissao.Date <= request.DataFim.Value.Date);
 
-            // FILTROS ATUALIZADOS PARA SUPORTAR CT-E
+            // 3. FILTRO DE TIPO (Removido CT-e)
             if (request.TipoDocumento == "NF-e")
                 query = query.Where(d => d.Schema.Contains("nfe", StringComparison.OrdinalIgnoreCase));
-            else if (request.TipoDocumento == "CT-e")
-                query = query.Where(d => d.Schema.Contains("cte", StringComparison.OrdinalIgnoreCase));
             else if (request.TipoDocumento == "Eventos")
                 query = query.Where(d => d.Schema.Contains("evento", StringComparison.OrdinalIgnoreCase));
 
             var listaFinal = new List<DocumentoListagemDto>();
+
             foreach (var doc in query)
             {
-                // Novo Extrator de CNPJ e Emitente robusto
-                string cnpj = ExtrairCnpjCpf(doc.XmlConteudo);
-                string emitente = ExtrairEmitente(doc.XmlConteudo);
-                string valor = ExtrairTag(doc.XmlConteudo, "vNF", null) ?? ExtrairTag(doc.XmlConteudo, "vTPrest", "0.00") ?? "0.00";
+                // Usando os dados diretamente da tabela relacionada Emitente
+                string cnpj = doc.Emitente?.Cnpj ?? "-";
+                string emitente = doc.Emitente?.RazaoSocial ?? "Emitente Desconhecido";
 
-                string schemaDisplay = doc.TipoDocumento;
+                string valor = ExtrairTag(doc.XmlConteudo, "vNF", "0.00") ?? "0.00";
+
+                string schemaDisplay = MapearSchema(doc.Schema);
                 if (doc.TipoDocumento.StartsWith("Evento") && !string.IsNullOrEmpty(doc.NomeEvento))
                     schemaDisplay = doc.NomeEvento;
 
-                string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, doc.TipoDocumento);
+                string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, schemaDisplay);
 
-                // Aplica Filtro Texto (agora filtrando também por CNPJ)
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
                     if (!doc.ChaveAcesso.Contains(request.FiltroTexto) &&
@@ -77,41 +83,18 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                 ));
             }
 
-            return listaFinal.OrderByDescending(x => x.Nsu).ToList();
+            return listaFinal.OrderByDescending(x => x.DataEmissao).ToList();
         }
 
-        // =========================================================
-        // MÉTODOS EXTRATORES MELHORADOS
-        // =========================================================
         private string? ExtrairTag(string xml, string tag, string? padrao)
         {
             var match = Regex.Match(xml, $"<{tag}>(.*?)</{tag}>");
             return match.Success ? match.Groups[1].Value : padrao;
         }
 
-        private string ExtrairEmitente(string xml)
-        {
-            // Pega o primeiro <xNome> que encontrar (Funciona tanto para Resumo quanto procNFe)
-            var match = Regex.Match(xml, @"<xNome>(.*?)</xNome>");
-            return match.Success ? match.Groups[1].Value : "Emitente Desconhecido";
-        }
-
-        private string ExtrairCnpjCpf(string xml)
-        {
-            var match = Regex.Match(xml, @"<(?:CNPJ|CPF)>([0-9]{11,14})</(?:CNPJ|CPF)>");
-            if (match.Success)
-            {
-                string doc = match.Groups[1].Value;
-                return doc.Length == 14 ?
-                    Convert.ToUInt64(doc).ToString(@"00\.000\.000\/0000\-00") :
-                    Convert.ToUInt64(doc).ToString(@"000\.000\.000\-00");
-            }
-            return "-";
-        }
-
         private string ExtrairSituacaoSefaz(string xml, string tipoDocumento)
         {
-            if (tipoDocumento.Contains("Resumo") || tipoDocumento == "NF-e")
+            if (tipoDocumento.Contains("Resumo") || tipoDocumento.Contains("NF-e"))
             {
                 var match = Regex.Match(xml, @"<cSitNFe>([0-9])</cSitNFe>");
                 if (match.Success)
@@ -124,20 +107,15 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                         _ => "Desconhecida"
                     };
                 }
-                return "Autorizada"; // procNFe só baixa se autorizada
+                return "Autorizada";
             }
-            return "Vinculado"; // Para eventos
+            return "Vinculado";
         }
 
         private string MapearSchema(string schema)
         {
             if (schema.Contains("procNFe")) return "NF-e Completa";
             if (schema.Contains("resNFe")) return "Resumo NF-e";
-
-            // ADICIONADOS SCHEMAS DE CT-E
-            if (schema.Contains("procCTe")) return "CT-e Completo";
-            if (schema.Contains("resCTe")) return "Resumo CT-e";
-
             if (schema.Contains("resEvento") || schema.Contains("procEvento") || schema.Contains("retEnvEvento")) return "Evento Sefaz";
             return "Outro";
         }

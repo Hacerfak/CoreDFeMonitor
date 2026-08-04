@@ -1,12 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
+    xmlns:core="using:CoreDFeMonitor.Core.Entities"
+    xmlns:dto="using:CoreDFeMonitor.Application.Features.Documentos.Dtos"
     xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     x:Class="CoreDFeMonitor.UI.Views.DocumentosView"
     x:DataType="vm:DocumentosViewModel">
 
-    <Grid ColumnDefinitions="260, *">
+    <!-- Agora temos 3 colunas: Menu (260), Emitentes (320), Documentos (Restante) -->
+    <Grid ColumnDefinitions="260, 320, *">
 
+        <!-- ========================================== -->
+        <!-- COLUNA 0: MENU LATERAL                     -->
+        <!-- ========================================== -->
         <Border Grid.Column="0" Background="#2C3E50" Padding="0,20">
             <StackPanel Spacing="10">
                 <TextBlock Text="DFe Monitor" Foreground="White" FontSize="24" FontWeight="Bold"
@@ -40,15 +46,56 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" Background="#F5F5F5" RowDefinitions="Auto, Auto, *">
+        <!-- ========================================== -->
+        <!-- COLUNA 1: LISTA DE EMITENTES (MESTRE)      -->
+        <!-- ========================================== -->
+        <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto, Auto, *">
+                <StackPanel Grid.Row="0" Margin="20,25" Spacing="5">
+                    <TextBlock Text="Fornecedores" FontSize="22" FontWeight="Bold"
+                        Foreground="#333333" />
+                    <TextBlock Text="Selecione um emitente para visualizar as notas e manifestar"
+                        FontSize="13" Foreground="Gray" TextWrapping="Wrap" />
+                </StackPanel>
 
+                <Separator Grid.Row="1" Background="#EEEEEE" Margin="0" />
+
+                <ListBox Grid.Row="2" ItemsSource="{Binding ListaEmitentes}"
+                    SelectedItem="{Binding EmitenteSelecionado}"
+                    Background="Transparent" BorderThickness="0"
+                    Margin="0,10,0,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="core:Emitente">
+                            <Border Padding="15,10" CornerRadius="8" Background="Transparent">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding RazaoSocial}" FontWeight="SemiBold"
+                                        FontSize="14" Foreground="#222222"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <icons:MaterialIcon Kind="Domain" Width="16" Height="16"
+                                            Foreground="Gray" />
+                                        <TextBlock Text="{Binding Cnpj}" FontSize="12"
+                                            Foreground="Gray" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- COLUNA 2: DOCUMENTOS E FILTROS (DETALHE)   -->
+        <!-- ========================================== -->
+        <Grid Grid.Column="2" Background="#F5F5F5" RowDefinitions="Auto, Auto, *">
             <ProgressBar Grid.Row="0" IsIndeterminate="True" Height="4" Foreground="#6200EE"
                 IsVisible="{Binding IsCarregando}" />
 
             <Border Grid.Row="1" Background="White" CornerRadius="0,0,12,12" Padding="30,20"
                 BoxShadow="0 4 10 0 #0D000000">
                 <StackPanel Spacing="15">
-                    <TextBlock Text="Repositório de DF-es" FontSize="28" FontWeight="SemiBold"
+                    <TextBlock Text="Repositório de DF-es" FontSize="24" FontWeight="SemiBold"
                         Foreground="#333333" />
 
                     <Grid ColumnDefinitions="Auto, Auto, Auto, *, Auto" Margin="0,10,0,0">
@@ -58,16 +105,15 @@
                             Margin="0,0,15,0" />
 
                         <ComboBox Grid.Column="2" ItemsSource="{Binding ListaTipos}"
-                            SelectedItem="{Binding TipoSelecionado}" Width="140" Margin="0,0,15,0" />
+                            SelectedItem="{Binding TipoSelecionado}" Width="130" Margin="0,0,15,0" />
 
                         <TextBox Grid.Column="3" Text="{Binding FiltroTexto}"
-                            PlaceholderText="Buscar por Chave ou Emitente..." Margin="0,0,15,0"
+                            PlaceholderText="Buscar por Chave ou NSU..." Margin="0,0,15,0"
                             VerticalAlignment="Center" />
 
                         <Button Grid.Column="4" Content="Filtrar"
-                            Command="{Binding CarregarDocumentosCommand}"
-                            Background="#6200EE" Foreground="White" Padding="25,8" CornerRadius="8"
-                            FontWeight="Bold" />
+                            Command="{Binding CarregarDocumentosCommand}" Background="#6200EE"
+                            Foreground="White" Padding="25,8" CornerRadius="8" FontWeight="Bold" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -76,6 +122,7 @@
                 BoxShadow="0 8 20 0 #1A000000">
                 <Grid RowDefinitions="Auto, *">
 
+                    <!-- BARRA DE AÇÕES -->
                     <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
                         <CheckBox Grid.Column="0" Content="Selecionar Todos"
                             IsChecked="{Binding TodosSelecionados}" FontWeight="SemiBold" />
@@ -97,12 +144,12 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- GRID DE DOCUMENTOS -->
                     <DataGrid Grid.Row="1" ItemsSource="{Binding Documentos}"
                         AutoGenerateColumns="False" IsReadOnly="False"
                         CanUserResizeColumns="True" CanUserSortColumns="True"
                         Background="Transparent" RowBackground="Transparent">
                         <DataGrid.Columns>
-
                             <DataGridTemplateColumn Width="50">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
@@ -112,30 +159,20 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Emissão (Local)"
+                            <DataGridTextColumn Header="Emissão"
                                 Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy HH:mm'}"
                                 Width="135" IsReadOnly="True" FontWeight="SemiBold" />
-
                             <DataGridTextColumn Header="NSU" Binding="{Binding Dados.Nsu}"
                                 Width="110" IsReadOnly="True" FontWeight="Bold" />
 
-                            <DataGridTextColumn Header="CNPJ / CPF"
-                                Binding="{Binding Dados.CnpjCpf}" Width="140" IsReadOnly="True"
-                                Foreground="#555555" />
-
-                            <DataGridTextColumn Header="Emitente / Razão Social"
-                                Binding="{Binding Dados.Emitente}" Width="*" IsReadOnly="True"
-                                Foreground="#333333" />
-
                             <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
-                                Width="120" IsReadOnly="True" FontWeight="SemiBold"
+                                Width="110" IsReadOnly="True" FontWeight="SemiBold"
                                 Foreground="#4CAF50" />
-
-                            <DataGridTextColumn Header="Status"
-                                Binding="{Binding Dados.SituacaoSefaz}" Width="100"
+                            <DataGridTextColumn Header="Status Sefaz"
+                                Binding="{Binding Dados.SituacaoSefaz}" Width="120"
                                 IsReadOnly="True" Foreground="#FF9800" FontWeight="SemiBold" />
 
-                            <DataGridTemplateColumn Header="Tipo" Width="150" IsReadOnly="True">
+                            <DataGridTemplateColumn Header="Tipo" Width="*" IsReadOnly="True">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
                                         <Border Background="#F0F0F0" CornerRadius="4" Padding="8,4"
@@ -147,12 +184,10 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </Border>
-
         </Grid>
     </Grid>
 </UserControl>
