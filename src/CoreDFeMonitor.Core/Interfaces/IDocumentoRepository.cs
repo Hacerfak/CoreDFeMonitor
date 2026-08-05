@@ -8,5 +8,6 @@ namespace CoreDFeMonitor.Core.Interfaces
         Task<bool> ExisteNsuAsync(Guid empresaId, string nsu, CancellationToken cancellationToken = default);
         Task<List<Documento>> ObterTodasAsync(CancellationToken cancellationToken = default);
         Task AtualizarAsync(Documento documento, CancellationToken cancellationToken);
+        Task<List<Documento>> ObterPendentesDeCienciaAsync(Guid empresaId, CancellationToken cancellationToken = default);
     }
 }

@@ -34,5 +34,25 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
             _context.Documentos.Update(documento);
             await _context.SaveChangesAsync(cancellationToken);
         }
+        public async Task<List<Documento>> ObterPendentesDeCienciaAsync(Guid empresaId, CancellationToken cancellationToken = default)
+        {
+            var dataLimite = DateTimeOffset.Now.AddDays(-10);
+
+            // 1. Vai no SQLite e traz APENAS as notas pendentes (Isso o banco entende bem)
+            var pendentesDoBanco = await _context.Documentos
+                .Where(d => d.EmpresaId == empresaId &&
+                            d.Schema.Contains("resNFe") &&
+                            !d.CienciaEnviada)
+                .ToListAsync(cancellationToken);
+
+            // 2. Filtra na memória do C# as datas, a chave e IGNORA canceladas/denegadas
+            return pendentesDoBanco
+                .Where(d => d.DataEmissao >= dataLimite &&
+                            !d.ChaveAcesso.StartsWith("SEM_CHAVE") &&
+                            !d.XmlConteudo.Contains("<cSitNFe>2</cSitNFe>") && // Ignora Denegadas
+                            !d.XmlConteudo.Contains("<cSitNFe>3</cSitNFe>"))   // Ignora Canceladas
+                .Take(20)
+                .ToList();
+        }
     }
 }

@@ -231,14 +231,21 @@ namespace CoreDFeMonitor.Infrastructure.Services
             {
                 var config = CriarConfiguracaoZeus(empresa);
                 using var servicoNfe = new ServicosNFe(config);
-
                 string ufArg = ((int)config.cUF).ToString();
+
                 var retorno = servicoNfe.NfeDistDFeInteresse(ufArg, empresa.Cnpj, nsuAtual);
 
                 if (retorno?.Retorno == null)
                     return new SefazDistribuicaoResult(false, nsuAtual, "Sefaz NF-e não respondeu.", documentosLidos);
 
                 var ret = retorno.Retorno;
+                _logger.LogInformation("[Sefaz DistDFe] cStat: {CStat} - {Motivo} | ultNSU: {UltNSU}", ret.cStat, ret.xMotivo, ret.ultNSU);
+
+                // Tratamento de bloqueio por spam na SEFAZ
+                if (ret.cStat == 656)
+                {
+                    return new SefazDistribuicaoResult(false, nsuAtual, "Bloqueio por Consumo Indevido (656). Aguarde 1 hora.", documentosLidos);
+                }
 
                 if (ret.cStat == 138 && ret.loteDistDFeInt != null)
                 {
@@ -247,7 +254,7 @@ namespace CoreDFeMonitor.Infrastructure.Services
                         var xmlDescompactado = Compressao.Unzip(docZip.XmlNfe);
                         documentosLidos.Add(new DocumentoZip(docZip.NSU.ToString(), docZip.schema, xmlDescompactado));
                     }
-                    _logger.LogInformation("Baixados {Count} novos documentos da Sefaz (NF-e) para {CNPJ}.", documentosLidos.Count, empresa.Cnpj);
+                    _logger.LogInformation("Baixados {Count} documentos a partir do NSU {NsuAtual}.", documentosLidos.Count, nsuAtual);
                 }
 
                 string nsuParaGravar = string.IsNullOrEmpty(ret.ultNSU.ToString()) ? nsuAtual : ret.ultNSU.ToString();

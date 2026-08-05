@@ -44,7 +44,14 @@ namespace CoreDFeMonitor.Core.Entities
 
         public bool RequerCienciaAutomatica(string cnpjEmpresa)
         {
-            return Schema.Contains("resNFe") && !CienciaEnviada;
+            if (!Schema.Contains("resNFe") || CienciaEnviada)
+                return false;
+
+            // Se o XML contiver cSitNFe 2 (Denegada) ou 3 (Cancelada), NÃO exige ciência!
+            if (XmlConteudo.Contains("<cSitNFe>2</cSitNFe>") || XmlConteudo.Contains("<cSitNFe>3</cSitNFe>"))
+                return false;
+
+            return true;
         }
     }
 }

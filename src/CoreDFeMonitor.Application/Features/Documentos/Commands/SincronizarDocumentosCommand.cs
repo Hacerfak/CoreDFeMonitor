@@ -1,4 +1,3 @@
-// Caminho: src/CoreDFeMonitor.Application/Features/Documentos/Commands/SincronizarDocumentosCommand.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +25,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
         private readonly INotificacaoDesktopService _notificacao;
         private readonly ILogger<SincronizarDocumentosCommandHandler> _logger;
 
-        // TRAVA DE CONCORRÊNCIA
         private static readonly SemaphoreSlim _syncLock = new SemaphoreSlim(1, 1);
 
         public SincronizarDocumentosCommandHandler(
@@ -51,11 +49,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
         public async Task<bool> Handle(SincronizarDocumentosCommand request, CancellationToken cancellationToken)
         {
-            if (!_syncLock.Wait(0))
-            {
-                _logger.LogWarning("Uma sincronização já está em andamento. Ignorando requisição concorrente.");
-                return false;
-            }
+            if (!_syncLock.Wait(0)) return false;
 
             try
             {
@@ -66,23 +60,16 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    _syncStatus.AtualizarMensagem($"Sincronizando NF-e: {empresa.RazaoSocial}...");
-                    _logger.LogInformation(">> Sincronizando empresa: {Razao} (NSU: {NSU})", empresa.RazaoSocial, empresa.UltimoNsu);
+                    _syncStatus.AtualizarMensagem($"Processando: {empresa.RazaoSocial}...");
 
                     // ==============================================================
-                    // AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES
+                    // 1. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES (Com limite para não bloquear Sefaz)
                     // ==============================================================
-                    var todosDocumentos = await _documentoRepository.ObterTodasAsync(cancellationToken);
-                    var pendentes = todosDocumentos
-                        .Where(d => d.EmpresaId == empresa.Id &&
-                                    d.Schema.Contains("resNFe") &&
-                                    !d.CienciaEnviada &&
-                                    (DateTimeOffset.Now - d.DataEmissao).TotalDays <= 10)
-                        .ToList();
+                    var pendentes = await _documentoRepository.ObterPendentesDeCienciaAsync(empresa.Id, cancellationToken);
 
                     if (pendentes.Any())
                     {
-                        _logger.LogInformation(">> Tentando recuperar Ciência para {Count} resumos pendentes válidos...", pendentes.Count);
+                        _logger.LogInformation(">> Enviando Ciência para {Count} resumos...", pendentes.Count);
                         foreach (var doc in pendentes)
                         {
                             var ciencia = await _sefazService.EnviarCienciaOperacaoAsync(empresa, doc.ChaveAcesso);
@@ -91,17 +78,26 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                 doc.MarcarCienciaEnviada();
                                 await _documentoRepository.AtualizarAsync(doc, cancellationToken);
                             }
-                            await Task.Delay(2000, cancellationToken);
+                            await Task.Delay(2000, cancellationToken); // Respiro de 2 segundos
                         }
                     }
 
                     // ==============================================================
-                    // DISTRIBUIÇÃO DFE
+                    // 2. DISTRIBUIÇÃO DFE (Laço de até 5 vezes para puxar histórico rápido)
                     // ==============================================================
-                    var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
+                    bool continuarBuscando = true;
+                    int limiteRequisicoes = 0;
 
-                    if (resultado.Sucesso)
+                    while (continuarBuscando && limiteRequisicoes < 5)
                     {
+                        limiteRequisicoes++;
+                        _syncStatus.AtualizarMensagem($"Sincronizando NF-e Sefaz (Lote {limiteRequisicoes})...");
+
+                        var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
+
+                        if (!resultado.Sucesso)
+                            break; // Aborta loop se tomar Consumo Indevido ou cair a rede
+
                         var novosDocumentos = new List<Documento>();
 
                         foreach (var docZip in resultado.Documentos)
@@ -115,41 +111,28 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                 string chaveAcesso = ExtrairChaveAcesso(docZip.XmlDescompactado);
                                 DateTimeOffset dataEmissao = ExtrairDataEmissao(docZip.XmlDescompactado);
 
+                                if (string.IsNullOrEmpty(chaveAcesso))
+                                    chaveAcesso = $"SEM_CHAVE_{docZip.Nsu}_{Guid.NewGuid().ToString().Substring(0, 5)}";
+
                                 if (string.IsNullOrEmpty(cnpjEmitente))
                                     cnpjEmitente = "00000000000000";
 
                                 var emitente = await _emitenteRepository.ObterPorCnpjAsync(cnpjEmitente, cancellationToken);
-
                                 if (emitente == null)
                                 {
-                                    emitente = new Emitente
-                                    {
-                                        Cnpj = cnpjEmitente,
-                                        RazaoSocial = nomeEmitente
-                                    };
-
+                                    emitente = new Emitente { Cnpj = cnpjEmitente, RazaoSocial = nomeEmitente };
                                     await _emitenteRepository.AdicionarAsync(emitente, cancellationToken);
                                 }
 
                                 var novoDoc = new Documento(empresa.Id, docZip.Nsu, docZip.Schema, docZip.XmlDescompactado)
                                 {
                                     EmitenteId = emitente.Id,
-                                    ChaveAcesso = chaveAcesso, // CORREÇÃO: Agora a chave não é mais vazia
-                                    DataEmissao = dataEmissao  // CORREÇÃO: Agora a data é extraída
+                                    ChaveAcesso = chaveAcesso,
+                                    DataEmissao = dataEmissao
                                 };
 
-                                if (novoDoc.RequerCienciaAutomatica(empresa.Cnpj))
-                                {
-                                    var cienciaResult = await _sefazService.EnviarCienciaOperacaoAsync(empresa, novoDoc.ChaveAcesso);
-                                    if (cienciaResult.Sucesso) novoDoc.MarcarCienciaEnviada();
-                                }
-
                                 novosDocumentos.Add(novoDoc);
-
-                                // Se não conseguiu extrair a chave, cria um fallback no nome para não sobreescrever
-                                string nomeArquivoChave = string.IsNullOrEmpty(novoDoc.ChaveAcesso) ? Guid.NewGuid().ToString() : novoDoc.ChaveAcesso;
-
-                                _ = _armazenamentoXmlService.SalvarXmlAsync(empresa.Cnpj, nomeArquivoChave, novoDoc.Schema, novoDoc.XmlConteudo);
+                                _ = _armazenamentoXmlService.SalvarXmlAsync(empresa.Cnpj, novoDoc.ChaveAcesso, novoDoc.Schema, novoDoc.XmlConteudo);
                             }
                         }
 
@@ -164,9 +147,11 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                             empresa.AtualizarNsu(resultado.UltimoNsuRetornado);
                             await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
                         }
-                    }
 
-                    await Task.Delay(5000, cancellationToken);
+                        // Se a Sefaz retornou 137 (Nenhum doc) ou a lista veio vazia, paramos o loop
+                        if (resultado.Documentos.Count == 0)
+                            continuarBuscando = false;
+                    }
                 }
 
                 if (totalDocumentosNovosBaixados > 0)
@@ -182,9 +167,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
             }
         }
 
-        // =========================================================
-        // MÉTODOS EXTRATORES DE XML
-        // =========================================================
         private string ExtrairCnpjCpf(string xml)
         {
             var match = Regex.Match(xml, @"<(?:CNPJ|CPF)>([0-9]{11,14})</(?:CNPJ|CPF)>");
@@ -199,11 +181,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
         private string ExtrairChaveAcesso(string xml)
         {
-            // Tenta achar a tag chNFe (comum em resNFe e resEvento)
             var matchChNFe = Regex.Match(xml, @"<chNFe>([0-9]{44})</chNFe>");
             if (matchChNFe.Success) return matchChNFe.Groups[1].Value;
 
-            // Tenta achar no ID da tag infNFe (comum no XML completo da NFe)
             var matchInfNFe = Regex.Match(xml, @"<infNFe[^>]*Id=""NFe([0-9]{44})""");
             if (matchInfNFe.Success) return matchInfNFe.Groups[1].Value;
 
@@ -212,22 +192,18 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
         private DateTimeOffset ExtrairDataEmissao(string xml)
         {
-            // Tenta dhEmi (Emissão da NFe/Resumo)
-            var matchDhEmi = Regex.Match(xml, @"<dhEmi>(.*?)</dhEmi>");
+            var matchDhEmi = Regex.Match(xml, @"<(?:dhEmi|dEmi)>(.*?)</(?:dhEmi|dEmi)>");
             if (matchDhEmi.Success && DateTimeOffset.TryParse(matchDhEmi.Groups[1].Value, out var dhEmi))
                 return dhEmi;
 
-            // Tenta dhEvento (Data do Evento)
             var matchDhEvento = Regex.Match(xml, @"<dhEvento>(.*?)</dhEvento>");
             if (matchDhEvento.Success && DateTimeOffset.TryParse(matchDhEvento.Groups[1].Value, out var dhEvento))
                 return dhEvento;
 
-            // Tenta dhRecbto (Data de Recebimento na Sefaz como fallback)
             var matchDhRecbto = Regex.Match(xml, @"<dhRecbto>(.*?)</dhRecbto>");
             if (matchDhRecbto.Success && DateTimeOffset.TryParse(matchDhRecbto.Groups[1].Value, out var dhRecbto))
                 return dhRecbto;
 
-            // Se não achar nada, salva a hora do download
             return DateTimeOffset.Now;
         }
     }

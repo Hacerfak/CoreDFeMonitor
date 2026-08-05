@@ -27,7 +27,15 @@ namespace CoreDFeMonitor.UI
             {
                 var services = new ServiceCollection();
 
-                services.AddLogging(builder => { builder.AddConsole(); builder.SetMinimumLevel(LogLevel.Information); });
+                services.AddLogging(builder =>
+            {
+                builder.AddConsole();
+                builder.SetMinimumLevel(LogLevel.Information);
+
+                // Silencia os logs de banco de dados do EF Core (mostra apenas se for Erro/Aviso)
+                builder.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+                builder.AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.Warning);
+            });
                 services.AddInfrastructure();
                 services.AddApplication();
 
