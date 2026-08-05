@@ -26,6 +26,8 @@ namespace CoreDFeMonitor.Core.Entities
         public int EmitenteId { get; set; }
         public Emitente Emitente { get; set; } = null!;
 
+        public int? CodigoManifestacao { get; set; }
+
         public Documento(Guid empresaId, string nsu, string schema, string xmlConteudo)
         {
             Id = Guid.NewGuid();
@@ -52,6 +54,11 @@ namespace CoreDFeMonitor.Core.Entities
                 return false;
 
             return true;
+        }
+
+        public void AtualizarManifestacao(int codigoEvento)
+        {
+            CodigoManifestacao = codigoEvento;
         }
     }
 }

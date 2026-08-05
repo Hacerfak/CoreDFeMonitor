@@ -38,6 +38,13 @@
   <ItemGroup>
     <ProjectReference Include="..\CoreDFeMonitor.Application\CoreDFeMonitor.Application.csproj" />
     <ProjectReference Include="..\CoreDFeMonitor.Core\CoreDFeMonitor.Core.csproj" />
-    <ProjectReference Include="..\CoreDFeMonitor.Infrastructure\CoreDFeMonitor.Infrastructure.csproj" />
+    <ProjectReference
+      Include="..\CoreDFeMonitor.Infrastructure\CoreDFeMonitor.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\NFeRetrato.frx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

@@ -29,5 +29,7 @@ namespace CoreDFeMonitor.Core.Interfaces
         // Apenas a distribuição de NF-e e eventos
         Task<SefazDistribuicaoResult> BaixarDocumentosAsync(Empresa empresa);
         Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso);
+        Task<SefazManifestacaoResult> EnviarManifestacaoAsync(Empresa empresa, string chaveAcesso, int codigoEvento, string justificativa = "");
+        Task<(bool Sucesso, string RetornoSefaz)> ConsultarStatusNFeAsync(Empresa empresa, string chaveAcesso);
     }
 }

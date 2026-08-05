@@ -323,5 +323,86 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 return new SefazManifestacaoResult(false, $"Erro Local: {ex.Message}");
             }
         }
+
+        public async Task<SefazManifestacaoResult> EnviarManifestacaoAsync(Empresa empresa, string chaveAcesso, int codigoEvento, string justificativa = "")
+        {
+            try
+            {
+                var config = CriarConfiguracaoZeus(empresa);
+                using var servicoNfe = new ServicosNFe(config);
+
+                int idLote = Convert.ToInt32(DateTime.Now.ToString("HHmmss"));
+                int seqEvento = 1;
+
+                var tipoEvento = codigoEvento switch
+                {
+                    210210 => NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdCienciaDaOperacao,
+                    210200 => NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdConfirmacaoDaOperacao,
+                    210240 => NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdOperacaoNaoRealizada,
+                    210220 => NFe.Classes.Servicos.Tipos.NFeTipoEvento.TeMdDesconhecimentoDaOperacao,
+                    _ => throw new ArgumentException("Código de manifestação inválido.")
+                };
+
+                _logger.LogInformation("Disparando Evento de Manifestação ({Evento}) para a Chave {Chave}", codigoEvento, chaveAcesso);
+
+                // TRATAMENTO RESTRITO DA JUSTIFICATIVA PARA NÃO QUEBRAR O SCHEMA
+                string just = null;
+                if (codigoEvento == 210240) // APENAS Operação Não Realizada exige/aceita justificativa
+                {
+                    just = justificativa?.Trim();
+                    if (string.IsNullOrEmpty(just) || just.Length < 15)
+                        return new SefazManifestacaoResult(false, "A Sefaz exige uma justificativa de no mínimo 15 caracteres para 'Operação Não Realizada'.");
+                }
+
+                // Passamos null na DataHora para o Zeus usar o relógio interno formatado corretamente sem milissegundos
+                var retorno = servicoNfe.RecepcaoEventoManifestacaoDestinatario(
+                    idLote, seqEvento, chaveAcesso, tipoEvento, empresa.Cnpj, just, dhEvento: null);
+
+                if (retorno?.Retorno == null)
+                    return new SefazManifestacaoResult(false, "Sefaz não respondeu ao evento.");
+
+                var retEnv = retorno.Retorno;
+
+                if (retEnv.cStat != 128)
+                    return new SefazManifestacaoResult(false, $"Rejeição Lote [{retEnv.cStat}]: {retEnv.xMotivo}");
+
+                if (retEnv.retEvento != null && retEnv.retEvento.Count > 0)
+                {
+                    var retEv = retEnv.retEvento[0].infEvento;
+                    if (retEv.cStat == 135 || retEv.cStat == 573) // 135 = Vinculado, 573 = Duplicidade (já estava vinculado)
+                        return new SefazManifestacaoResult(true, $"[{retEv.cStat}] {retEv.xMotivo}");
+
+                    return new SefazManifestacaoResult(false, $"Rejeição Sefaz [{retEv.cStat}]: {retEv.xMotivo}");
+                }
+
+                return new SefazManifestacaoResult(false, "Sefaz retornou vazio para o Evento.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao emitir Manifestação: {Message}", ex.Message);
+                return new SefazManifestacaoResult(false, $"Erro Local: {ex.Message}");
+            }
+        }
+
+        public async Task<(bool Sucesso, string RetornoSefaz)> ConsultarStatusNFeAsync(Empresa empresa, string chaveAcesso)
+        {
+            try
+            {
+                var config = CriarConfiguracaoZeus(empresa);
+                using var servicoNfe = new ServicosNFe(config);
+                var retorno = servicoNfe.NfeConsultaProtocolo(chaveAcesso);
+
+                if (retorno?.Retorno != null)
+                {
+                    var stat = retorno.Retorno;
+                    return (true, $"Status: {stat.cStat} - {stat.xMotivo}\nRecebido em: {stat.protNFe.infProt.dhRecbto}");
+                }
+                return (false, "Sefaz não retornou dados.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Erro: {ex.Message}");
+            }
+        }
     }
 }

@@ -7,8 +7,11 @@ using CommunityToolkit.Mvvm.Input;
 using CoreDFeMonitor.Application.Features.Documentos.Queries;
 using CoreDFeMonitor.Application.Features.Emitentes.Queries;
 using CoreDFeMonitor.Application.Features.Empresas.Queries;
+using CoreDFeMonitor.Application.Features.Documentos.Dtos;
+using CoreDFeMonitor.Application.Features.Documentos.Commands;
 using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Mediator;
+using CoreDFeMonitor.Core.Interfaces;
 
 namespace CoreDFeMonitor.UI.ViewModels
 {
@@ -16,6 +19,8 @@ namespace CoreDFeMonitor.UI.ViewModels
     {
         private readonly IMediator _mediator;
         private readonly MainViewModel _mainViewModel;
+        private readonly IImpressaoService _impressaoService;
+        private readonly INotificacaoDesktopService _notificacao;
 
         // ============================================
         // FILTRO DE EMPRESA (DESTINATÁRIO)
@@ -82,10 +87,12 @@ namespace CoreDFeMonitor.UI.ViewModels
 
         public ObservableCollection<DocumentoItemViewModel> Documentos { get; } = new();
 
-        public DocumentosViewModel(IMediator mediator, MainViewModel mainViewModel)
+        public DocumentosViewModel(IMediator mediator, MainViewModel mainViewModel, IImpressaoService impressaoService, INotificacaoDesktopService notificacao)
         {
             _mediator = mediator;
             _mainViewModel = mainViewModel;
+            _impressaoService = impressaoService;
+            _notificacao = notificacao;
             _ = InicializarTelaAsync();
         }
 
@@ -163,6 +170,102 @@ namespace CoreDFeMonitor.UI.ViewModels
             await Task.Delay(2000);
             MensagemAcao = string.Empty;
             await CarregarDocumentosAsync();
+        }
+
+        [RelayCommand]
+        private void ImprimirDanfe(DocumentoListagemDto doc)
+        {
+            if (doc.SchemaDisplay == "NFe" || doc.SchemaDisplay == "NF-e Completa")
+            {
+                try
+                {
+                    _impressaoService.VisualizarDanfe(doc.XmlConteudo, doc.ChaveAcesso);
+                }
+                catch (Exception ex)
+                {
+                    _notificacao.Exibir("Erro de Impressão", ex.Message);
+                }
+            }
+            else
+            {
+                _notificacao.Exibir("Aviso", "Apenas a NF-e completa (com protocolo) pode gerar o DANFE.");
+            }
+        }
+
+        [RelayCommand]
+        private async Task ConsultarStatusNFeAsync(DocumentoListagemDto doc)
+        {
+            IsCarregando = true;
+            try
+            {
+                // Substitua 'ConsultarStatusDocumentoCommand' pelo nome exato que você criou no CQRS
+                var result = await _mediator.Send(new CoreDFeMonitor.Application.Features.Documentos.Commands.ConsultarStatusDocumentoCommand
+                {
+                    DocumentoId = doc.Id
+                });
+                _notificacao.Exibir("Retorno SEFAZ", result.Mensagem);
+            }
+            finally
+            {
+                IsCarregando = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task ManifestarConfirmacaoAsync(DocumentoListagemDto doc)
+        {
+            await ExecutarManifestacaoAsync(doc, 210200, "Confirmação");
+        }
+
+        [RelayCommand]
+        private async Task ManifestarDesconhecimentoAsync(DocumentoListagemDto doc)
+        {
+            await ExecutarManifestacaoAsync(doc, 210220, "Desconhecimento");
+        }
+
+        [RelayCommand]
+        private async Task ManifestarNaoRealizadaAsync(DocumentoListagemDto doc)
+        {
+            if (doc == null) return;
+
+            // Tratamento de segurança para UI: Se você ainda não possui um serviço 
+            // de Dialog customizado no Avalonia que roda de forma assíncrona segura,
+            // utilize uma justificativa padrão válida (mínimo 15 caracteres) 
+            // para evitar o crash da Thread de UI.
+            string justificativaSegura = "Operacao nao realizada pela empresa";
+
+            await ExecutarManifestacaoAsync(doc, 210240, justificativaSegura);
+        }
+
+        private async Task ExecutarManifestacaoAsync(DocumentoListagemDto doc, int codigoEvento, string justificativa)
+        {
+            if (IsCarregando) return; // Trava contra cliques duplos que causam crash
+
+            IsCarregando = true;
+            try
+            {
+                var result = await _mediator.Send(new CoreDFeMonitor.Application.Features.Documentos.Commands.ManifestarDocumentoCommand
+                {
+                    DocumentoId = doc.Id,
+                    CodigoManifestacao = codigoEvento,
+                    Justificativa = justificativa
+                });
+
+                _notificacao.Exibir("Manifestação Sefaz", result.Mensagem);
+
+                if (result.Sucesso)
+                {
+                    await CarregarDocumentosAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _notificacao.Exibir("Erro CRÍTICO", $"Ocorreu um erro ao manifestar: {ex.Message}");
+            }
+            finally
+            {
+                IsCarregando = false;
+            }
         }
     }
 }

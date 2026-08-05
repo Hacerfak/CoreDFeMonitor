@@ -35,6 +35,7 @@ namespace CoreDFeMonitor.Infrastructure
             services.AddScoped<ISefazService, SefazService>(); // Scoped pois fará integrações transacionais
             services.AddScoped<IArmazenamentoXmlService, ArmazenamentoXmlService>();
             services.AddScoped<IEmitenteRepository, EmitenteRepository>();
+            services.AddScoped<IImpressaoService, ImpressaoService>();
             services.AddSingleton<INotificacaoDesktopService, NotificacaoDesktopService>();
 
             return services;
