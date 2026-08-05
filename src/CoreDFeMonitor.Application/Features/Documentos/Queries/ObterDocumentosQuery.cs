@@ -12,13 +12,12 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 {
     public class ObterDocumentosQuery : IRequest<List<DocumentoListagemDto>>
     {
+        public Guid? EmpresaId { get; set; }
+        public int? EmitenteId { get; set; }
         public DateTime? DataInicio { get; set; }
         public DateTime? DataFim { get; set; }
         public string FiltroTexto { get; set; } = string.Empty;
         public string TipoDocumento { get; set; } = "Todos";
-
-        // NOVO: Propriedade para filtrar pelo clique no painel lateral
-        public int? EmitenteId { get; set; }
     }
 
     public class ObterDocumentosQueryHandler : IRequestHandler<ObterDocumentosQuery, List<DocumentoListagemDto>>
@@ -35,38 +34,32 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var todos = await _documentoRepository.ObterTodasAsync(cancellationToken);
             var query = todos.AsEnumerable();
 
-            // 1. FILTRO DE EMITENTE
+            if (request.EmpresaId.HasValue && request.EmpresaId.Value != Guid.Empty)
+                query = query.Where(d => d.EmpresaId == request.EmpresaId.Value);
+
             if (request.EmitenteId.HasValue && request.EmitenteId.Value > 0)
                 query = query.Where(d => d.EmitenteId == request.EmitenteId.Value);
 
-            // 2. FILTRO DE DATAS
             if (request.DataInicio.HasValue)
                 query = query.Where(d => d.DataEmissao.Date >= request.DataInicio.Value.Date);
 
             if (request.DataFim.HasValue)
                 query = query.Where(d => d.DataEmissao.Date <= request.DataFim.Value.Date);
 
-            // 3. FILTRO DE TIPO (Removido CT-e)
-            if (request.TipoDocumento == "NF-e")
-                query = query.Where(d => d.Schema.Contains("nfe", StringComparison.OrdinalIgnoreCase));
-            else if (request.TipoDocumento == "Eventos")
-                query = query.Where(d => d.Schema.Contains("evento", StringComparison.OrdinalIgnoreCase));
+            if (request.TipoDocumento != "Todos")
+                query = query.Where(d => d.TipoDocumento.Equals(request.TipoDocumento, StringComparison.OrdinalIgnoreCase));
 
             var listaFinal = new List<DocumentoListagemDto>();
 
             foreach (var doc in query)
             {
-                // Usando os dados diretamente da tabela relacionada Emitente
                 string cnpj = doc.Emitente?.Cnpj ?? "-";
                 string emitente = doc.Emitente?.RazaoSocial ?? "Emitente Desconhecido";
-
                 string valor = ExtrairTag(doc.XmlConteudo, "vNF", "0.00") ?? "0.00";
 
-                string schemaDisplay = MapearSchema(doc.Schema);
-                if (doc.TipoDocumento.StartsWith("Evento") && !string.IsNullOrEmpty(doc.NomeEvento))
-                    schemaDisplay = doc.NomeEvento;
-
-                string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, schemaDisplay);
+                string numero = ExtrairNumero(doc.ChaveAcesso, doc.XmlConteudo);
+                string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, doc.TipoDocumento);
+                string statusManifestacao = ExtrairManifestacao(doc.XmlConteudo, doc.TipoDocumento, doc.NomeEvento);
 
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
@@ -77,9 +70,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                 }
 
                 listaFinal.Add(new DocumentoListagemDto(
-                    doc.Id, doc.Nsu, doc.ChaveAcesso, schemaDisplay,
-                    cnpj, emitente, $"R$ {valor}", situacao,
-                    doc.DataEmissao, doc.DataProcessamento, doc.CienciaEnviada, doc.XmlConteudo
+                    doc.Id, doc.Nsu, numero, doc.ChaveAcesso, doc.TipoDocumento,
+                    cnpj, emitente, $"R$ {valor}", situacao, statusManifestacao,
+                    doc.DataEmissao, doc.CienciaEnviada, doc.XmlConteudo
                 ));
             }
 
@@ -92,32 +85,47 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             return match.Success ? match.Groups[1].Value : padrao;
         }
 
-        private string ExtrairSituacaoSefaz(string xml, string tipoDocumento)
+        private string ExtrairNumero(string chave, string xml)
         {
-            if (tipoDocumento.Contains("Resumo") || tipoDocumento.Contains("NF-e"))
+            var nNF = ExtrairTag(xml, "nNF", null);
+            if (!string.IsNullOrEmpty(nNF)) return nNF;
+
+            // Tenta extrair da chave (posições 25 a 33)
+            if (!string.IsNullOrEmpty(chave) && chave.Length == 44)
+                return chave.Substring(25, 9).TrimStart('0');
+
+            return "-";
+        }
+
+        private string ExtrairSituacaoSefaz(string xml, string tipo)
+        {
+            if (tipo == "Resumo" || tipo == "NFe")
             {
-                var match = Regex.Match(xml, @"<cSitNFe>([0-9])</cSitNFe>");
-                if (match.Success)
+                var cSitNFe = ExtrairTag(xml, "cSitNFe", "1");
+                return cSitNFe switch
                 {
-                    return match.Groups[1].Value switch
-                    {
-                        "1" => "Autorizada",
-                        "2" => "Denegada",
-                        "3" => "Cancelada",
-                        _ => "Desconhecida"
-                    };
-                }
-                return "Autorizada";
+                    "1" => "Autorizada",
+                    "2" => "Denegada",
+                    "3" => "Cancelada",
+                    _ => "Desconhecida"
+                };
             }
             return "Vinculado";
         }
 
-        private string MapearSchema(string schema)
+        private string ExtrairManifestacao(string xml, string tipo, string nomeEvento)
         {
-            if (schema.Contains("procNFe")) return "NF-e Completa";
-            if (schema.Contains("resNFe")) return "Resumo NF-e";
-            if (schema.Contains("resEvento") || schema.Contains("procEvento") || schema.Contains("retEnvEvento")) return "Evento Sefaz";
-            return "Outro";
+            if (tipo == "Evento") return nomeEvento; // Se for evento, mostra o nome dele (Ex: Carta de Correção)
+
+            var cSitConf = ExtrairTag(xml, "cSitConf", "0");
+            return cSitConf switch
+            {
+                "1" => "Confirmada",
+                "2" => "Desconhecida",
+                "3" => "Não Realizada",
+                "4" => "Ciência",
+                _ => "Sem Manifestação"
+            };
         }
     }
 }

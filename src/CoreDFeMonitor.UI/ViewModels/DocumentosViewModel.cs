@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CoreDFeMonitor.Application.Features.Documentos.Queries;
 using CoreDFeMonitor.Application.Features.Emitentes.Queries;
+using CoreDFeMonitor.Application.Features.Empresas.Queries;
 using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Mediator;
 
@@ -17,27 +18,67 @@ namespace CoreDFeMonitor.UI.ViewModels
         private readonly MainViewModel _mainViewModel;
 
         // ============================================
-        // PAINEL LATERAL (MESTRE) - EMITENTES
+        // FILTRO DE EMPRESA (DESTINATÁRIO)
+        // ============================================
+        public ObservableCollection<Empresa> ListaEmpresas { get; } = new();
+
+        private Empresa? _empresaSelecionada;
+        public Empresa? EmpresaSelecionada
+        {
+            get => _empresaSelecionada;
+            set
+            {
+                if (SetProperty(ref _empresaSelecionada, value))
+                {
+                    _ = CarregarDocumentosAsync();
+                }
+            }
+        }
+
+        // ============================================
+        // FILTRO LATERAL (EMITENTES)
         // ============================================
         public ObservableCollection<Emitente> ListaEmitentes { get; } = new();
 
-        [ObservableProperty]
         private Emitente? _emitenteSelecionado;
+        public Emitente? EmitenteSelecionado
+        {
+            get => _emitenteSelecionado;
+            set
+            {
+                if (SetProperty(ref _emitenteSelecionado, value))
+                {
+                    _ = CarregarDocumentosAsync();
+                }
+            }
+        }
 
         // ============================================
-        // FILTROS E PAINEL PRINCIPAL (DETALHE)
+        // FILTROS SUPERIORES E CONTROLES DE TELA
         // ============================================
         [ObservableProperty] private DateTimeOffset? _dataInicio = DateTimeOffset.Now.AddDays(-30);
         [ObservableProperty] private DateTimeOffset? _dataFim = DateTimeOffset.Now;
         [ObservableProperty] private string _filtroTexto = string.Empty;
-        [ObservableProperty] private string _tipoSelecionado = "Todos";
 
-        // Removido o CT-e
-        public string[] ListaTipos { get; } = { "Todos", "NF-e", "Eventos" };
+        [ObservableProperty] private string _tipoSelecionado = "Todos";
+        public string[] ListaTipos { get; } = { "Todos", "Resumo", "NFe", "Evento" };
 
         [ObservableProperty] private bool _isCarregando = false;
-        [ObservableProperty] private bool _todosSelecionados = false;
         [ObservableProperty] private string _mensagemAcao = string.Empty;
+
+        // Propriedade manual para o checkbox de "Selecionar Todos"
+        private bool _todosSelecionados = false;
+        public bool TodosSelecionados
+        {
+            get => _todosSelecionados;
+            set
+            {
+                if (SetProperty(ref _todosSelecionados, value))
+                {
+                    foreach (var doc in Documentos) doc.IsSelecionado = value;
+                }
+            }
+        }
 
         public ObservableCollection<DocumentoItemViewModel> Documentos { get; } = new();
 
@@ -45,32 +86,25 @@ namespace CoreDFeMonitor.UI.ViewModels
         {
             _mediator = mediator;
             _mainViewModel = mainViewModel;
-
             _ = InicializarTelaAsync();
         }
 
         private async Task InicializarTelaAsync()
         {
-            await CarregarEmitentesAsync();
-            await CarregarDocumentosAsync();
-        }
+            var empresas = await _mediator.Send(new ObterTodasEmpresasQuery());
+            foreach (var emp in empresas) ListaEmpresas.Add(emp);
 
-        [RelayCommand]
-        public async Task CarregarEmitentesAsync()
-        {
-            var emitentes = await _mediator.Send(new ObterEmitentesQuery());
-            ListaEmitentes.Clear();
-
-            foreach (var emitente in emitentes)
+            // Só seleciona a primeira empresa para não disparar chamadas nulas
+            if (ListaEmpresas.Any())
             {
-                ListaEmitentes.Add(emitente);
+                _empresaSelecionada = ListaEmpresas.First();
+                OnPropertyChanged(nameof(EmpresaSelecionada));
             }
-        }
 
-        // Evento automático do CommunityToolkit. Dispara quando o usuário clica num emitente.
-        partial void OnEmitenteSelecionadoChanged(Emitente? value)
-        {
-            _ = CarregarDocumentosAsync();
+            var emitentes = await _mediator.Send(new ObterEmitentesQuery());
+            foreach (var emitente in emitentes) ListaEmitentes.Add(emitente);
+
+            await CarregarDocumentosAsync();
         }
 
         [RelayCommand]
@@ -81,29 +115,31 @@ namespace CoreDFeMonitor.UI.ViewModels
 
             var query = new ObterDocumentosQuery
             {
+                EmpresaId = EmpresaSelecionada?.Id,
+                EmitenteId = EmitenteSelecionado?.Id,
                 DataInicio = DataInicio?.DateTime,
                 DataFim = DataFim?.DateTime,
                 FiltroTexto = FiltroTexto,
-                TipoDocumento = TipoSelecionado,
-                EmitenteId = EmitenteSelecionado?.Id // O ID do fornecedor clicado!
+                TipoDocumento = TipoSelecionado
             };
 
             var resultados = await _mediator.Send(query);
 
             Documentos.Clear();
-            foreach (var doc in resultados)
-            {
-                Documentos.Add(new DocumentoItemViewModel(doc));
-            }
+            foreach (var doc in resultados) Documentos.Add(new DocumentoItemViewModel(doc));
 
-            TodosSelecionados = false;
+            // Reseta a checkbox sem disparar o loop
+            _todosSelecionados = false;
+            OnPropertyChanged(nameof(TodosSelecionados));
+
             IsCarregando = false;
         }
 
-        partial void OnTodosSelecionadosChanged(bool value)
-        {
-            foreach (var doc in Documentos) doc.IsSelecionado = value;
-        }
+        [RelayCommand]
+        private void NavegarDashboard() => _mainViewModel.NavegarPara<DashboardViewModel>();
+
+        [RelayCommand]
+        private void NavegarConfiguracoes() => _mainViewModel.NavegarPara<ConfiguracoesViewModel>();
 
         [RelayCommand]
         private async Task BaixarXmlsSelecionadosAsync()
@@ -128,11 +164,5 @@ namespace CoreDFeMonitor.UI.ViewModels
             MensagemAcao = string.Empty;
             await CarregarDocumentosAsync();
         }
-
-        [RelayCommand]
-        private void NavegarDashboard() => _mainViewModel.NavegarPara<DashboardViewModel>();
-
-        [RelayCommand]
-        private void NavegarConfiguracoes() => _mainViewModel.NavegarPara<ConfiguracoesViewModel>();
     }
 }

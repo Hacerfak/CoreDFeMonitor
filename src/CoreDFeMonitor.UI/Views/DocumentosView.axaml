@@ -7,17 +7,12 @@
     x:Class="CoreDFeMonitor.UI.Views.DocumentosView"
     x:DataType="vm:DocumentosViewModel">
 
-    <!-- Agora temos 3 colunas: Menu (260), Emitentes (320), Documentos (Restante) -->
     <Grid ColumnDefinitions="260, 320, *">
-
-        <!-- ========================================== -->
-        <!-- COLUNA 0: MENU LATERAL                     -->
-        <!-- ========================================== -->
+        <!-- COLUNA 0: MENU LATERAL -->
         <Border Grid.Column="0" Background="#2C3E50" Padding="0,20">
             <StackPanel Spacing="10">
                 <TextBlock Text="DFe Monitor" Foreground="White" FontSize="24" FontWeight="Bold"
                     Margin="25,0,20,35" />
-
                 <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
                     Padding="25,18" CornerRadius="0" Command="{Binding NavegarDashboardCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="18">
@@ -26,7 +21,6 @@
                         <TextBlock Text="Visão Geral" VerticalAlignment="Center" FontSize="16" />
                     </StackPanel>
                 </Button>
-
                 <Button Background="#34495E" Foreground="White" HorizontalAlignment="Stretch"
                     Padding="25,18" CornerRadius="0">
                     <StackPanel Orientation="Horizontal" Spacing="18">
@@ -35,7 +29,6 @@
                         <TextBlock Text="Documentos" VerticalAlignment="Center" FontSize="16" />
                     </StackPanel>
                 </Button>
-
                 <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
                     Padding="25,18" CornerRadius="0" Command="{Binding NavegarConfiguracoesCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="18">
@@ -46,24 +39,19 @@
             </StackPanel>
         </Border>
 
-        <!-- ========================================== -->
-        <!-- COLUNA 1: LISTA DE EMITENTES (MESTRE)      -->
-        <!-- ========================================== -->
+        <!-- COLUNA 1: LISTA DE EMITENTES -->
         <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
             <Grid RowDefinitions="Auto, Auto, *">
                 <StackPanel Grid.Row="0" Margin="20,25" Spacing="5">
                     <TextBlock Text="Fornecedores" FontSize="22" FontWeight="Bold"
                         Foreground="#333333" />
-                    <TextBlock Text="Selecione um emitente para visualizar as notas e manifestar"
-                        FontSize="13" Foreground="Gray" TextWrapping="Wrap" />
+                    <TextBlock Text="Selecione um emitente para filtrar as notas." FontSize="13"
+                        Foreground="Gray" TextWrapping="Wrap" />
                 </StackPanel>
-
                 <Separator Grid.Row="1" Background="#EEEEEE" Margin="0" />
-
                 <ListBox Grid.Row="2" ItemsSource="{Binding ListaEmitentes}"
-                    SelectedItem="{Binding EmitenteSelecionado}"
-                    Background="Transparent" BorderThickness="0"
-                    Margin="0,10,0,0">
+                    SelectedItem="{Binding EmitenteSelecionado}" Background="Transparent"
+                    BorderThickness="0" Margin="0,10,0,0">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="core:Emitente">
                             <Border Padding="15,10" CornerRadius="8" Background="Transparent">
@@ -85,9 +73,7 @@
             </Grid>
         </Border>
 
-        <!-- ========================================== -->
-        <!-- COLUNA 2: DOCUMENTOS E FILTROS (DETALHE)   -->
-        <!-- ========================================== -->
+        <!-- COLUNA 2: DOCUMENTOS E FILTROS -->
         <Grid Grid.Column="2" Background="#F5F5F5" RowDefinitions="Auto, Auto, *">
             <ProgressBar Grid.Row="0" IsIndeterminate="True" Height="4" Foreground="#6200EE"
                 IsVisible="{Binding IsCarregando}" />
@@ -98,55 +84,40 @@
                     <TextBlock Text="Repositório de DF-es" FontSize="24" FontWeight="SemiBold"
                         Foreground="#333333" />
 
-                    <Grid ColumnDefinitions="Auto, Auto, Auto, *, Auto" Margin="0,10,0,0">
-                        <DatePicker Grid.Column="0" SelectedDate="{Binding DataInicio}" Width="140"
+                    <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto" Margin="0,10,0,0">
+                        <ComboBox Grid.Column="0" ItemsSource="{Binding ListaEmpresas}"
+                            SelectedItem="{Binding EmpresaSelecionada}" Width="200"
+                            Margin="0,0,15,0" ToolTip.Tip="Empresa Destinatária">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding RazaoSocial}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <DatePicker Grid.Column="1" SelectedDate="{Binding DataInicio}" Width="140"
                             Margin="0,0,15,0" />
-                        <DatePicker Grid.Column="1" SelectedDate="{Binding DataFim}" Width="140"
+                        <DatePicker Grid.Column="2" SelectedDate="{Binding DataFim}" Width="140"
                             Margin="0,0,15,0" />
 
-                        <ComboBox Grid.Column="2" ItemsSource="{Binding ListaTipos}"
+                        <ComboBox Grid.Column="3" ItemsSource="{Binding ListaTipos}"
                             SelectedItem="{Binding TipoSelecionado}" Width="130" Margin="0,0,15,0" />
 
-                        <TextBox Grid.Column="3" Text="{Binding FiltroTexto}"
-                            PlaceholderText="Buscar por Chave ou NSU..." Margin="0,0,15,0"
+                        <TextBox Grid.Column="4" Text="{Binding FiltroTexto}"
+                            PlaceholderText="Buscar por Chave..." Margin="0,0,15,0"
                             VerticalAlignment="Center" />
-
-                        <Button Grid.Column="4" Content="Filtrar"
+                        <Button Grid.Column="5" Content="Filtrar"
                             Command="{Binding CarregarDocumentosCommand}" Background="#6200EE"
                             Foreground="White" Padding="25,8" CornerRadius="8" FontWeight="Bold" />
                     </Grid>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="2" Background="White" CornerRadius="12" Padding="25" Margin="30"
+            <Border Grid.Row="2" Background="White" CornerRadius="12" Padding="20" Margin="30"
                 BoxShadow="0 8 20 0 #1A000000">
                 <Grid RowDefinitions="Auto, *">
-
-                    <!-- BARRA DE AÇÕES -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,15">
-                        <CheckBox Grid.Column="0" Content="Selecionar Todos"
-                            IsChecked="{Binding TodosSelecionados}" FontWeight="SemiBold" />
-
-                        <TextBlock Grid.Column="1" Text="{Binding MensagemAcao}"
-                            Foreground="#4CAF50" FontWeight="SemiBold" VerticalAlignment="Center"
-                            Margin="20,0" />
-
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                            <Button Content="Manifestar"
-                                Command="{Binding ManifestarSelecionadosCommand}"
-                                Background="#FFF8E1" Foreground="#FFA000" CornerRadius="6"
-                                ToolTip.Tip="Confirmar, Desconhecer..." />
-                            <Button Content="Baixar XML(s)"
-                                Command="{Binding BaixarXmlsSelecionadosCommand}"
-                                Background="#E8F5E9" Foreground="#4CAF50" CornerRadius="6" />
-                            <Button Content="Imprimir DANFE" Background="#F3E5F5"
-                                Foreground="#6200EE" CornerRadius="6" />
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- GRID DE DOCUMENTOS -->
                     <DataGrid Grid.Row="1" ItemsSource="{Binding Documentos}"
-                        AutoGenerateColumns="False" IsReadOnly="False"
+                        AutoGenerateColumns="False" IsReadOnly="True"
                         CanUserResizeColumns="True" CanUserSortColumns="True"
                         Background="Transparent" RowBackground="Transparent">
                         <DataGrid.Columns>
@@ -159,31 +130,55 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Emissão"
-                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy HH:mm'}"
-                                Width="135" IsReadOnly="True" FontWeight="SemiBold" />
-                            <DataGridTextColumn Header="NSU" Binding="{Binding Dados.Nsu}"
-                                Width="110" IsReadOnly="True" FontWeight="Bold" />
+                            <DataGridTextColumn Header="Data"
+                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy'}"
+                                Width="100" />
 
-                            <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
-                                Width="110" IsReadOnly="True" FontWeight="SemiBold"
-                                Foreground="#4CAF50" />
-                            <DataGridTextColumn Header="Status Sefaz"
-                                Binding="{Binding Dados.SituacaoSefaz}" Width="120"
-                                IsReadOnly="True" Foreground="#FF9800" FontWeight="SemiBold" />
-
-                            <DataGridTemplateColumn Header="Tipo" Width="*" IsReadOnly="True">
+                            <DataGridTemplateColumn Header="Tipo" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
-                                        <Border Background="#F0F0F0" CornerRadius="4" Padding="8,4"
+                                        <Border Background="#F0F0F0" CornerRadius="4" Padding="6,2"
                                             HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Dados.SchemaDisplay}"
-                                                FontSize="12" FontWeight="SemiBold"
+                                                FontSize="11" FontWeight="SemiBold"
                                                 Foreground="#6200EE" />
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Número" Binding="{Binding Dados.Numero}"
+                                Width="90" FontWeight="Bold" />
+                            <DataGridTextColumn Header="Emitente" Binding="{Binding Dados.Emitente}"
+                                Width="*" Foreground="#333333" />
+                            <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
+                                Width="110" Foreground="#4CAF50" FontWeight="SemiBold" />
+
+                            <DataGridTextColumn Header="Manifestação / Evento"
+                                Binding="{Binding Dados.StatusManifestacao}" Width="180"
+                                Foreground="#FF9800" FontWeight="SemiBold" />
+
+                            <DataGridTemplateColumn Header="Ações" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                            HorizontalAlignment="Center">
+                                            <Button Background="Transparent" Padding="5"
+                                                ToolTip.Tip="Download XML">
+                                                <icons:MaterialIcon Kind="Download"
+                                                    Foreground="#4CAF50" Width="18" Height="18" />
+                                            </Button>
+                                            <Button Background="Transparent" Padding="5"
+                                                ToolTip.Tip="Imprimir DANFE"
+                                                IsVisible="{Binding Dados.SchemaDisplay, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Evento'}">
+                                                <icons:MaterialIcon Kind="Printer"
+                                                    Foreground="#6200EE" Width="18" Height="18" />
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

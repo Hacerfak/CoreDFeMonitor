@@ -1,3 +1,4 @@
+// Caminho: src/CoreDFeMonitor.Application/Features/Documentos/Commands/SincronizarDocumentosCommand.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +64,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                     _syncStatus.AtualizarMensagem($"Processando: {empresa.RazaoSocial}...");
 
                     // ==============================================================
-                    // 1. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES (Com limite para não bloquear Sefaz)
+                    // 1. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES
                     // ==============================================================
                     var pendentes = await _documentoRepository.ObterPendentesDeCienciaAsync(empresa.Id, cancellationToken);
 
@@ -78,12 +79,12 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                 doc.MarcarCienciaEnviada();
                                 await _documentoRepository.AtualizarAsync(doc, cancellationToken);
                             }
-                            await Task.Delay(2000, cancellationToken); // Respiro de 2 segundos
+                            await Task.Delay(2000, cancellationToken);
                         }
                     }
 
                     // ==============================================================
-                    // 2. DISTRIBUIÇÃO DFE (Laço de até 5 vezes para puxar histórico rápido)
+                    // 2. DISTRIBUIÇÃO DFE
                     // ==============================================================
                     bool continuarBuscando = true;
                     int limiteRequisicoes = 0;
@@ -96,7 +97,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                         var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
 
                         if (!resultado.Sucesso)
-                            break; // Aborta loop se tomar Consumo Indevido ou cair a rede
+                            break;
 
                         var novosDocumentos = new List<Documento>();
 
@@ -106,10 +107,29 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
                             if (!jaExiste)
                             {
-                                string cnpjEmitente = ExtrairCnpjCpf(docZip.XmlDescompactado);
-                                string nomeEmitente = ExtrairNomeEmitente(docZip.XmlDescompactado);
-                                string chaveAcesso = ExtrairChaveAcesso(docZip.XmlDescompactado);
-                                DateTimeOffset dataEmissao = ExtrairDataEmissao(docZip.XmlDescompactado);
+                                string xml = docZip.XmlDescompactado;
+                                string schemaLower = docZip.Schema.ToLower();
+
+                                string chaveAcesso = ExtrairChaveAcesso(xml);
+                                string cnpjEmitente = ExtrairCnpjCpf(xml);
+                                string nomeEmitente = ExtrairNomeEmitente(xml);
+                                DateTimeOffset dataEmissao = ExtrairDataEmissao(xml);
+
+                                // CLASSIFICAÇÃO DO TIPO DE DOCUMENTO E EVENTO
+                                string tipoDoc = "NFe";
+                                string tipoEv = string.Empty;
+                                string nomeEv = string.Empty;
+
+                                if (schemaLower.Contains("resnfe"))
+                                {
+                                    tipoDoc = "Resumo";
+                                }
+                                else if (schemaLower.Contains("evento"))
+                                {
+                                    tipoDoc = "Evento";
+                                    tipoEv = ExtrairTipoEvento(xml);
+                                    nomeEv = ExtrairNomeEvento(xml);
+                                }
 
                                 if (string.IsNullOrEmpty(chaveAcesso))
                                     chaveAcesso = $"SEM_CHAVE_{docZip.Nsu}_{Guid.NewGuid().ToString().Substring(0, 5)}";
@@ -128,8 +148,17 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                 {
                                     EmitenteId = emitente.Id,
                                     ChaveAcesso = chaveAcesso,
-                                    DataEmissao = dataEmissao
+                                    DataEmissao = dataEmissao,
+                                    TipoDocumento = tipoDoc,      // Agora salva a classificação certa
+                                    TipoEvento = tipoEv,          // Salva o código do evento
+                                    NomeEvento = nomeEv           // Salva o nome do evento
                                 };
+
+                                if (novoDoc.RequerCienciaAutomatica(empresa.Cnpj) && !novoDoc.ChaveAcesso.StartsWith("SEM_CHAVE"))
+                                {
+                                    var cienciaResult = await _sefazService.EnviarCienciaOperacaoAsync(empresa, novoDoc.ChaveAcesso);
+                                    if (cienciaResult.Sucesso) novoDoc.MarcarCienciaEnviada();
+                                }
 
                                 novosDocumentos.Add(novoDoc);
                                 _ = _armazenamentoXmlService.SalvarXmlAsync(empresa.Cnpj, novoDoc.ChaveAcesso, novoDoc.Schema, novoDoc.XmlConteudo);
@@ -148,7 +177,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                             await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
                         }
 
-                        // Se a Sefaz retornou 137 (Nenhum doc) ou a lista veio vazia, paramos o loop
                         if (resultado.Documentos.Count == 0)
                             continuarBuscando = false;
                     }
@@ -167,6 +195,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
             }
         }
 
+        // =========================================================
+        // MÉTODOS EXTRATORES DE XML
+        // =========================================================
         private string ExtrairCnpjCpf(string xml)
         {
             var match = Regex.Match(xml, @"<(?:CNPJ|CPF)>([0-9]{11,14})</(?:CNPJ|CPF)>");
@@ -205,6 +236,19 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 return dhRecbto;
 
             return DateTimeOffset.Now;
+        }
+
+        private string ExtrairTipoEvento(string xml)
+        {
+            var match = Regex.Match(xml, @"<tpEvento>(.*?)</tpEvento>");
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+
+        private string ExtrairNomeEvento(string xml)
+        {
+            // Tenta pegar o <xEvento>, se não achar, tenta <descEvento> (pois alguns schemas mudam a tag)
+            var match = Regex.Match(xml, @"<(?:xEvento|descEvento)>(.*?)</(?:xEvento|descEvento)>");
+            return match.Success ? match.Groups[1].Value : string.Empty;
         }
     }
 }
