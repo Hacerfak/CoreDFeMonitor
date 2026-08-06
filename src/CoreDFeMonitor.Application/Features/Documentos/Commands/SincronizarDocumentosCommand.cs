@@ -61,10 +61,22 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
+                    // ==============================================================
+                    // 1. VERIFICAÇÃO INTELIGENTE DE PROTEÇÃO (ANTI-CONSUMO INDEVIDO)
+                    // ==============================================================
+                    if (empresa.EstaEmEsperaObrigatoriaSefaz())
+                    {
+                        string horaLiberacao = empresa.LiberacaoSefazEm()?.ToString("HH:mm") ?? "--:--";
+                        _syncStatus.AtualizarMensagem($"[Proteção] {empresa.RazaoSocial} em espera (Livre às {horaLiberacao}).");
+
+                        await Task.Delay(2000, cancellationToken); // Pausa visual para a UI
+                        continue; // Pula a empresa sem bater na SEFAZ
+                    }
+
                     _syncStatus.AtualizarMensagem($"Processando: {empresa.RazaoSocial}...");
 
                     // ==============================================================
-                    // 1. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES
+                    // 2. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES
                     // ==============================================================
                     var pendentes = await _documentoRepository.ObterPendentesDeCienciaAsync(empresa.Id, cancellationToken);
 
@@ -84,15 +96,15 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                     }
 
                     // ==============================================================
-                    // 2. DISTRIBUIÇÃO DFE
+                    // 3. DISTRIBUIÇÃO DFE (Lotes Inteligentes)
                     // ==============================================================
                     bool continuarBuscando = true;
-                    int limiteRequisicoes = 0;
+                    int lotesBaixados = 0;
 
-                    while (continuarBuscando && limiteRequisicoes < 5)
+                    while (continuarBuscando)
                     {
-                        limiteRequisicoes++;
-                        _syncStatus.AtualizarMensagem($"Sincronizando NF-e Sefaz (Lote {limiteRequisicoes})...");
+                        lotesBaixados++;
+                        _syncStatus.AtualizarMensagem($"Sincronizando NF-e Sefaz (Lote {lotesBaixados})...");
 
                         var resultado = await _sefazService.BaixarDocumentosAsync(empresa);
 
@@ -115,7 +127,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                 string nomeEmitente = ExtrairNomeEmitente(xml);
                                 DateTimeOffset dataEmissao = ExtrairDataEmissao(xml);
 
-                                // CLASSIFICAÇÃO DO TIPO DE DOCUMENTO E EVENTO
                                 string tipoDoc = "NFe";
                                 string tipoEv = string.Empty;
                                 string nomeEv = string.Empty;
@@ -149,9 +160,9 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                                     EmitenteId = emitente.Id,
                                     ChaveAcesso = chaveAcesso,
                                     DataEmissao = dataEmissao,
-                                    TipoDocumento = tipoDoc,      // Agora salva a classificação certa
-                                    TipoEvento = tipoEv,          // Salva o código do evento
-                                    NomeEvento = nomeEv           // Salva o nome do evento
+                                    TipoDocumento = tipoDoc,
+                                    TipoEvento = tipoEv,
+                                    NomeEvento = nomeEv
                                 };
 
                                 if (novoDoc.RequerCienciaAutomatica(empresa.Cnpj) && !novoDoc.ChaveAcesso.StartsWith("SEM_CHAVE"))
@@ -171,14 +182,34 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                             totalDocumentosNovosBaixados += novosDocumentos.Count;
                         }
 
+                        // Atualiza as flags de proteção e NSU da Empresa
+                        bool precisaAtualizarEmpresa = false;
+
                         if (empresa.UltimoNsu != resultado.UltimoNsuRetornado)
                         {
                             empresa.AtualizarNsu(resultado.UltimoNsuRetornado);
-                            await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
+                            precisaAtualizarEmpresa = true;
                         }
 
                         if (resultado.Documentos.Count == 0)
+                        {
+                            // A Sefaz não devolveu nada (cStat 137). Ativa a trava de 1 hora.
+                            empresa.RegistrarConsultaVazia();
+                            precisaAtualizarEmpresa = true;
                             continuarBuscando = false;
+                        }
+                        else
+                        {
+                            // A fila andou! Limpamos qualquer bloqueio anterior e damos fôlego para o próximo lote.
+                            empresa.LimparBloqueioConsulta();
+                            precisaAtualizarEmpresa = true;
+                            await Task.Delay(2000, cancellationToken);
+                        }
+
+                        if (precisaAtualizarEmpresa)
+                        {
+                            await _empresaRepository.AtualizarAsync(empresa, cancellationToken);
+                        }
                     }
                 }
 
@@ -246,7 +277,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
         private string ExtrairNomeEvento(string xml)
         {
-            // Tenta pegar o <xEvento>, se não achar, tenta <descEvento> (pois alguns schemas mudam a tag)
             var match = Regex.Match(xml, @"<(?:xEvento|descEvento)>(.*?)</(?:xEvento|descEvento)>");
             return match.Success ? match.Groups[1].Value : string.Empty;
         }

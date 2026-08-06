@@ -29,8 +29,21 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task AtualizarAsync(Documento documento, CancellationToken cancellationToken)
+        public async Task AtualizarAsync(Documento documento, CancellationToken cancellationToken = default)
         {
+            // 1. Verifica se o documento já está rastreado e o desanexa
+            var entidadeRastreada = _context.Documentos.Local.FirstOrDefault(d => d.Id == documento.Id);
+            if (entidadeRastreada != null)
+            {
+                _context.Entry(entidadeRastreada).State = EntityState.Detached;
+            }
+
+            // 2. TRUQUE MÁGICO: Anulamos a propriedade de navegação (o objeto inteiro).
+            // Isso impede que o EF Core tente rastrear/atualizar o Emitente na tabela dele.
+            // A chave estrangeira (documento.EmitenteId) continua intacta!
+            documento.Emitente = null!;
+
+            // 3. Atualiza apenas os dados da tabela de Documento
             _context.Documentos.Update(documento);
             await _context.SaveChangesAsync(cancellationToken);
         }

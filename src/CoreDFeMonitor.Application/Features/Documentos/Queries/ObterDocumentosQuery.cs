@@ -5,11 +5,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CoreDFeMonitor.Application.Features.Documentos.Dtos;
+using CoreDFeMonitor.Core.Entities;
 using CoreDFeMonitor.Core.Interfaces;
 using CoreDFeMonitor.Core.Mediator;
 
 namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 {
+    // A classe ObterDocumentosQuery continua igual aqui em cima...
     public class ObterDocumentosQuery : IRequest<List<DocumentoListagemDto>>
     {
         public Guid? EmpresaId { get; set; }
@@ -59,7 +61,15 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 
                 string numero = ExtrairNumero(doc.ChaveAcesso, doc.XmlConteudo);
                 string situacao = ExtrairSituacaoSefaz(doc.XmlConteudo, doc.TipoDocumento);
-                string statusManifestacao = ExtrairManifestacao(doc.XmlConteudo, doc.TipoDocumento, doc.NomeEvento);
+
+                // NOVO: Extrai a manifestação priorizando o banco de dados
+                string statusManifestacao = ExtrairManifestacao(doc);
+
+                // REGRAS DE TELA
+                bool isNfe = doc.TipoDocumento.Equals("NFe", StringComparison.OrdinalIgnoreCase);
+
+                // Pode manifestar se for NFe e ainda não tiver manifestação conclusiva (null ou apenas Ciência)
+                bool podeManifestar = isNfe && (!doc.CodigoManifestacao.HasValue || doc.CodigoManifestacao == 210210);
 
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
@@ -72,7 +82,8 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                 listaFinal.Add(new DocumentoListagemDto(
                     doc.Id, doc.Nsu, numero, doc.ChaveAcesso, doc.TipoDocumento,
                     cnpj, emitente, $"R$ {valor}", situacao, statusManifestacao,
-                    doc.DataEmissao, doc.CienciaEnviada, doc.XmlConteudo
+                    doc.DataEmissao, doc.CienciaEnviada, doc.XmlConteudo,
+                    podeManifestar, isNfe
                 ));
             }
 
@@ -90,7 +101,6 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             var nNF = ExtrairTag(xml, "nNF", null);
             if (!string.IsNullOrEmpty(nNF)) return nNF;
 
-            // Tenta extrair da chave (posições 25 a 33)
             if (!string.IsNullOrEmpty(chave) && chave.Length == 44)
                 return chave.Substring(25, 9).TrimStart('0');
 
@@ -113,11 +123,25 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
             return "Vinculado";
         }
 
-        private string ExtrairManifestacao(string xml, string tipo, string nomeEvento)
+        private string ExtrairManifestacao(Documento doc)
         {
-            if (tipo == "Evento") return nomeEvento; // Se for evento, mostra o nome dele (Ex: Carta de Correção)
+            if (doc.TipoDocumento == "Evento") return doc.NomeEvento;
 
-            var cSitConf = ExtrairTag(xml, "cSitConf", "0");
+            // 1º Prioridade: O que gravamos no nosso banco de dados (ação nossa)
+            if (doc.CodigoManifestacao.HasValue)
+            {
+                return doc.CodigoManifestacao.Value switch
+                {
+                    210200 => "Confirmada",
+                    210240 => "Não Realizada",
+                    210220 => "Desconhecida",
+                    210210 => "Ciência",
+                    _ => "Sem Manifestação"
+                };
+            }
+
+            // 2º Prioridade: O que veio no XML da SEFAZ
+            var cSitConf = ExtrairTag(doc.XmlConteudo, "cSitConf", "0");
             return cSitConf switch
             {
                 "1" => "Confirmada",

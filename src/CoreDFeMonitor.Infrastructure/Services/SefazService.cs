@@ -346,7 +346,7 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 _logger.LogInformation("Disparando Evento de Manifestação ({Evento}) para a Chave {Chave}", codigoEvento, chaveAcesso);
 
                 // TRATAMENTO RESTRITO DA JUSTIFICATIVA PARA NÃO QUEBRAR O SCHEMA
-                string just = null;
+                string? just = null;
                 if (codigoEvento == 210240) // APENAS Operação Não Realizada exige/aceita justificativa
                 {
                     just = justificativa?.Trim();

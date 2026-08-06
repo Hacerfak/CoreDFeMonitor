@@ -26,6 +26,7 @@ namespace CoreDFeMonitor.Core.Entities
         public string? SenhaCertificado { get; private set; }
         public DateTime DataCadastro { get; private set; }
         public string UltimoNsu { get; private set; } = "000000000000000"; // Sempre 15 dígitos
+        public DateTimeOffset? UltimaConsultaVazia { get; private set; }
 
         protected Empresa() { }
 
@@ -74,6 +75,30 @@ namespace CoreDFeMonitor.Core.Entities
         {
             if (!string.IsNullOrEmpty(novoNsu))
                 UltimoNsu = novoNsu.PadLeft(15, '0');
+        }
+
+        public void RegistrarConsultaVazia()
+        {
+            UltimaConsultaVazia = DateTimeOffset.Now;
+        }
+
+        public void LimparBloqueioConsulta()
+        {
+            UltimaConsultaVazia = null;
+        }
+
+        // Verifica se ainda não passou 1 hora desde a última consulta vazia
+        public bool EstaEmEsperaObrigatoriaSefaz()
+        {
+            if (!UltimaConsultaVazia.HasValue) return false;
+
+            return DateTimeOffset.Now < UltimaConsultaVazia.Value.AddHours(1);
+        }
+
+        public DateTimeOffset? LiberacaoSefazEm()
+        {
+            if (!UltimaConsultaVazia.HasValue) return null;
+            return UltimaConsultaVazia.Value.AddHours(1);
         }
     }
 }

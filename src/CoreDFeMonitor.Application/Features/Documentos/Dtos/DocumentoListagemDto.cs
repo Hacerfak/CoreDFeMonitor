@@ -15,6 +15,8 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Dtos
         string StatusManifestacao,
         DateTimeOffset DataEmissao,
         bool CienciaEnviada,
-        string XmlConteudo
+        string XmlConteudo,
+        bool PodeManifestar, // Controla se o botão de manifestação fica habilitado
+        bool IsNFe           // Controla se os botões de ação aparecem
     );
 }

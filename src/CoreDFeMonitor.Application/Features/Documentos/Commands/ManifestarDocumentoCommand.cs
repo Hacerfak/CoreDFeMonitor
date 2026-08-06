@@ -26,6 +26,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
             _empresaRepository = empresaRepository;
             _sefazService = sefazService;
         }
+        public record ManifestarDocumentoResult(bool Sucesso, string Mensagem);
 
         public async Task<(bool Sucesso, string Mensagem)> Handle(ManifestarDocumentoCommand request, CancellationToken cancellationToken)
         {
@@ -34,6 +35,10 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
             if (documento == null) return (false, "Documento não encontrado.");
 
             var empresa = await _empresaRepository.ObterPorIdAsync(documento.EmpresaId, cancellationToken);
+            if (empresa == null)
+            {
+                return (false, "Empresa não encontrada no banco de dados.");
+            }
             var resultadoSefaz = await _sefazService.EnviarManifestacaoAsync(empresa, documento.ChaveAcesso, request.CodigoManifestacao, request.Justificativa);
 
             if (resultadoSefaz.Sucesso)

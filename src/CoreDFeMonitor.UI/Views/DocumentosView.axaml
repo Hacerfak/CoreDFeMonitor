@@ -160,11 +160,14 @@
                                 Foreground="#FF9800" FontWeight="SemiBold" />
 
                             <!-- COLUNA DE AÇÕES INDIVIDUAIS -->
+                            <!-- COLUNA DE AÇÕES INDIVIDUAIS -->
                             <DataGridTemplateColumn Header="Ações" Width="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <!-- StackPanel agora só aparece se IsNFe for true -->
                                         <StackPanel Orientation="Horizontal" Spacing="8"
-                                            HorizontalAlignment="Center">
+                                            HorizontalAlignment="Center"
+                                            IsVisible="{Binding Dados.IsNFe}">
 
                                             <!-- Consultar Sefaz -->
                                             <Button Background="Transparent" Padding="5"
@@ -175,9 +178,11 @@
                                                     Foreground="#2196F3" Width="18" Height="18" />
                                             </Button>
 
-                                            <!-- Menu de Manifestações -->
+                                            <!-- Menu de Manifestações (Desabilita quando
+                                            PodeManifestar = false) -->
                                             <Button Background="Transparent" Padding="5"
-                                                ToolTip.Tip="Opções de Manifestação">
+                                                ToolTip.Tip="Opções de Manifestação"
+                                                IsEnabled="{Binding Dados.PodeManifestar}">
                                                 <icons:MaterialIcon Kind="Handshake"
                                                     Foreground="#FF9800" Width="18" Height="18" />
                                                 <Button.Flyout>
@@ -213,10 +218,9 @@
                                                 </Button.Flyout>
                                             </Button>
 
-                                            <!-- Imprimir DANFE (Oculto se for Evento) -->
+                                            <!-- Imprimir DANFE -->
                                             <Button Background="Transparent" Padding="5"
                                                 ToolTip.Tip="Imprimir DANFE"
-                                                IsVisible="{Binding Dados.SchemaDisplay, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter='Evento'}"
                                                 Command="{Binding #RootControl.DataContext.ImprimirDanfeCommand}"
                                                 CommandParameter="{Binding Dados}">
                                                 <icons:MaterialIcon Kind="Printer"
