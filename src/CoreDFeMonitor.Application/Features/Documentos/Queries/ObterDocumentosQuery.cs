@@ -127,7 +127,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
         {
             if (doc.TipoDocumento == "Evento") return doc.NomeEvento;
 
-            // 1º Prioridade: O que gravamos no nosso banco de dados (ação nossa)
+            // 1º Prioridade: O que gravamos no nosso banco de dados (ação do usuário)
             if (doc.CodigoManifestacao.HasValue)
             {
                 return doc.CodigoManifestacao.Value switch
@@ -135,19 +135,25 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                     210200 => "Confirmada",
                     210240 => "Não Realizada",
                     210220 => "Desconhecida",
-                    210210 => "Ciência",
-                    _ => "Sem Manifestação"
+                    210210 => "Ciência Enviada",
+                    _ => doc.CienciaEnviada ? "Ciência Enviada" : "Ciência Não Enviada"
                 };
             }
 
-            // 2º Prioridade: O que veio no XML da SEFAZ
+            // 2º Prioridade: Se não tem código de manifestação, mas o sistema disparou a Ciência Automática (Resumos)
+            if (doc.CienciaEnviada)
+            {
+                return "Ciência Enviada";
+            }
+
+            // 3º Prioridade: O que veio gravado direto no XML da SEFAZ
             var cSitConf = ExtrairTag(doc.XmlConteudo, "cSitConf", "0");
             return cSitConf switch
             {
                 "1" => "Confirmada",
                 "2" => "Desconhecida",
                 "3" => "Não Realizada",
-                "4" => "Ciência",
+                "4" => "Ciência Enviada",
                 _ => "Sem Manifestação"
             };
         }

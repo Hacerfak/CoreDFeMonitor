@@ -49,23 +49,29 @@ namespace CoreDFeMonitor.Infrastructure.Data.Repositories
         }
         public async Task<List<Documento>> ObterPendentesDeCienciaAsync(Guid empresaId, CancellationToken cancellationToken = default)
         {
+            // Retornamos a regra de 10 dias da Sefaz
             var dataLimite = DateTimeOffset.Now.AddDays(-10);
 
-            // 1. Vai no SQLite e traz APENAS as notas pendentes (Isso o banco entende bem)
+            // 1. Vai no SQLite e traz os resumos pendentes
             var pendentesDoBanco = await _context.Documentos
                 .Where(d => d.EmpresaId == empresaId &&
-                            d.Schema.Contains("resNFe") &&
-                            !d.CienciaEnviada)
+                            d.TipoDocumento == "Resumo" &&
+                            d.CienciaEnviada == false)
                 .ToListAsync(cancellationToken);
 
-            // 2. Filtra na memória do C# as datas, a chave e IGNORA canceladas/denegadas
-            return pendentesDoBanco
+            // 2. Filtra na memória e ORDENA
+            var pendentesFiltrados = pendentesDoBanco
                 .Where(d => d.DataEmissao >= dataLimite &&
+                            !string.IsNullOrEmpty(d.ChaveAcesso) &&
                             !d.ChaveAcesso.StartsWith("SEM_CHAVE") &&
-                            !d.XmlConteudo.Contains("<cSitNFe>2</cSitNFe>") && // Ignora Denegadas
-                            !d.XmlConteudo.Contains("<cSitNFe>3</cSitNFe>"))   // Ignora Canceladas
+                            !string.IsNullOrEmpty(d.XmlConteudo) &&
+                            !d.XmlConteudo.Contains("<cSitNFe>2</cSitNFe>") &&
+                            !d.XmlConteudo.Contains("<cSitNFe>3</cSitNFe>"))
+                .OrderByDescending(d => d.DataEmissao) // <-- TRUQUE: Processa os recentes primeiro!
                 .Take(20)
                 .ToList();
+
+            return pendentesFiltrados;
         }
     }
 }

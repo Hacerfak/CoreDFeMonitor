@@ -50,7 +50,13 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
         public async Task<bool> Handle(SincronizarDocumentosCommand request, CancellationToken cancellationToken)
         {
-            if (!_syncLock.Wait(0)) return false;
+            _logger.LogInformation(">> Tentando iniciar sincronização...");
+
+            if (!_syncLock.Wait(0))
+            {
+                _logger.LogWarning(">> Sincronização ignorada: Já existe um processo rodando (Lock ativo).");
+                return false;
+            }
 
             try
             {
@@ -61,38 +67,57 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    // ==============================================================
-                    // 1. VERIFICAÇÃO INTELIGENTE DE PROTEÇÃO (ANTI-CONSUMO INDEVIDO)
-                    // ==============================================================
-                    if (empresa.EstaEmEsperaObrigatoriaSefaz())
-                    {
-                        string horaLiberacao = empresa.LiberacaoSefazEm()?.ToString("HH:mm") ?? "--:--";
-                        _syncStatus.AtualizarMensagem($"[Proteção] {empresa.RazaoSocial} em espera (Livre às {horaLiberacao}).");
-
-                        await Task.Delay(2000, cancellationToken); // Pausa visual para a UI
-                        continue; // Pula a empresa sem bater na SEFAZ
-                    }
-
                     _syncStatus.AtualizarMensagem($"Processando: {empresa.RazaoSocial}...");
+                    _logger.LogInformation($"Processando: {empresa.RazaoSocial}...");
 
                     // ==============================================================
-                    // 2. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES
+                    // 1. AUTO-RECUPERAÇÃO DE CIÊNCIAS PENDENTES (Livre de Bloqueio)
                     // ==============================================================
                     var pendentes = await _documentoRepository.ObterPendentesDeCienciaAsync(empresa.Id, cancellationToken);
 
                     if (pendentes.Any())
                     {
                         _logger.LogInformation(">> Enviando Ciência para {Count} resumos...", pendentes.Count);
+                        _syncStatus.AtualizarMensagem($"Enviando {pendentes.Count} Ciências pendentes...");
+
                         foreach (var doc in pendentes)
                         {
                             var ciencia = await _sefazService.EnviarCienciaOperacaoAsync(empresa, doc.ChaveAcesso);
+
                             if (ciencia.Sucesso)
                             {
+                                _logger.LogInformation($"[OK] Ciência enviada com sucesso para: {doc.ChaveAcesso}");
                                 doc.MarcarCienciaEnviada();
                                 await _documentoRepository.AtualizarAsync(doc, cancellationToken);
                             }
-                            await Task.Delay(2000, cancellationToken);
+                            else
+                            {
+                                _logger.LogWarning($"[FALHA] Erro na Ciência da chave {doc.ChaveAcesso}: {ciencia.Mensagem}");
+
+                                // AUTO-LIMPEZA: Se rejeitou por Prazo (596) ou Duplicidade (573),
+                                // nós marcamos como enviada no banco para ele sair da fila para sempre.
+                                if (ciencia.Mensagem.Contains("596") || ciencia.Mensagem.Contains("573"))
+                                {
+                                    doc.MarcarCienciaEnviada();
+                                    await _documentoRepository.AtualizarAsync(doc, cancellationToken);
+                                }
+                            }
+                            // Um pequeno respiro para não sobrecarregar o servidor de eventos
+                            await Task.Delay(1500, cancellationToken);
                         }
+                    }
+
+                    // ==============================================================
+                    // 2. VERIFICAÇÃO INTELIGENTE DE PROTEÇÃO PARA DOWNLOAD
+                    // ==============================================================
+                    if (empresa.EstaEmEsperaObrigatoriaSefaz())
+                    {
+                        string horaLiberacao = empresa.LiberacaoSefazEm()?.ToString("HH:mm") ?? "--:--";
+                        _syncStatus.AtualizarMensagem($"[Proteção] {empresa.RazaoSocial} em espera (Livre às {horaLiberacao}).");
+                        _logger.LogWarning($"[Proteção] {empresa.RazaoSocial} em espera (Livre às {horaLiberacao}). Pulando download...");
+
+                        await Task.Delay(2000, cancellationToken); // Pausa visual para a UI
+                        continue; // Pula o download da SEFAZ, mas as ciências já foram enviadas!
                     }
 
                     // ==============================================================
@@ -193,7 +218,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Commands
 
                         if (resultado.Documentos.Count == 0)
                         {
-                            // A Sefaz não devolveu nada (cStat 137). Ativa a trava de 1 hora.
+                            // A Sefaz não devolveu nada (cStat 137). Ativa a trava de 1 hora apenas para o Download.
                             empresa.RegistrarConsultaVazia();
                             precisaAtualizarEmpresa = true;
                             continuarBuscando = false;
