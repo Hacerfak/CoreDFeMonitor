@@ -237,6 +237,15 @@ namespace CoreDFeMonitor.UI.ViewModels
             await ExecutarManifestacaoAsync(doc, 210240, justificativaSegura);
         }
 
+        [RelayCommand]
+        private async Task EnviarCienciaManualAsync(DocumentoListagemDto doc)
+        {
+            if (doc == null) return;
+
+            // O código 210210 é o Evento de Ciência da Operação
+            await ExecutarManifestacaoAsync(doc, 210210, "Ciencia da Operacao");
+        }
+
         private async Task ExecutarManifestacaoAsync(DocumentoListagemDto doc, int codigoEvento, string justificativa)
         {
             if (IsCarregando) return; // Trava contra cliques duplos que causam crash

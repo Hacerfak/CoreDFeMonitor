@@ -17,6 +17,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Dtos
         bool CienciaEnviada,
         string XmlConteudo,
         bool PodeManifestar, // Controla se o botão de manifestação fica habilitado
-        bool IsNFe           // Controla se os botões de ação aparecem
+        bool IsNFe,
+        bool PodeEnviarCiencia
     );
 }

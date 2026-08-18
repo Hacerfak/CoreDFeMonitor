@@ -160,28 +160,28 @@
                                 Foreground="#FF9800" FontWeight="SemiBold" />
 
                             <!-- COLUNA DE AÇÕES INDIVIDUAIS -->
-                            <!-- COLUNA DE AÇÕES INDIVIDUAIS -->
                             <DataGridTemplateColumn Header="Ações" Width="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
-                                        <!-- StackPanel agora só aparece se IsNFe for true -->
+                                        <!-- Removemos o IsVisible do StackPanel para podermos
+                                        exibir o botão nos resumos -->
                                         <StackPanel Orientation="Horizontal" Spacing="8"
-                                            HorizontalAlignment="Center"
-                                            IsVisible="{Binding Dados.IsNFe}">
+                                            HorizontalAlignment="Center">
 
-                                            <!-- Consultar Sefaz -->
+                                            <!-- Consultar Sefaz (Aparece SÓ para NFe) -->
                                             <Button Background="Transparent" Padding="5"
                                                 ToolTip.Tip="Consultar Situação na Sefaz"
+                                                IsVisible="{Binding Dados.IsNFe}"
                                                 Command="{Binding #RootControl.DataContext.ConsultarStatusNFeCommand}"
                                                 CommandParameter="{Binding Dados}">
                                                 <icons:MaterialIcon Kind="Magnify"
                                                     Foreground="#2196F3" Width="18" Height="18" />
                                             </Button>
 
-                                            <!-- Menu de Manifestações (Desabilita quando
-                                            PodeManifestar = false) -->
+                                            <!-- Menu de Manifestações (Aparece SÓ para NFe) -->
                                             <Button Background="Transparent" Padding="5"
                                                 ToolTip.Tip="Opções de Manifestação"
+                                                IsVisible="{Binding Dados.IsNFe}"
                                                 IsEnabled="{Binding Dados.PodeManifestar}">
                                                 <icons:MaterialIcon Kind="Handshake"
                                                     Foreground="#FF9800" Width="18" Height="18" />
@@ -218,19 +218,31 @@
                                                 </Button.Flyout>
                                             </Button>
 
-                                            <!-- Imprimir DANFE -->
+                                            <!-- NOVO: Enviar Ciência Manual (Aparece SÓ para
+                                            Resumos Pendentes) -->
+                                            <Button Background="Transparent" Padding="5"
+                                                ToolTip.Tip="Forçar envio de Ciência"
+                                                IsVisible="{Binding Dados.PodeEnviarCiencia}"
+                                                Command="{Binding #RootControl.DataContext.EnviarCienciaManualCommand}"
+                                                CommandParameter="{Binding Dados}">
+                                                <icons:MaterialIcon Kind="SendCheck"
+                                                    Foreground="#4CAF50" Width="18" Height="18" />
+                                            </Button>
+
+                                            <!-- Imprimir DANFE (Aparece SÓ para NFe) -->
                                             <Button Background="Transparent" Padding="5"
                                                 ToolTip.Tip="Imprimir DANFE"
+                                                IsVisible="{Binding Dados.IsNFe}"
                                                 Command="{Binding #RootControl.DataContext.ImprimirDanfeCommand}"
                                                 CommandParameter="{Binding Dados}">
                                                 <icons:MaterialIcon Kind="Printer"
                                                     Foreground="#6200EE" Width="18" Height="18" />
                                             </Button>
+
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

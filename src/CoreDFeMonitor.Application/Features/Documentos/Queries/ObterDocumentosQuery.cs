@@ -67,9 +67,10 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
 
                 // REGRAS DE TELA
                 bool isNfe = doc.TipoDocumento.Equals("NFe", StringComparison.OrdinalIgnoreCase);
-
-                // Pode manifestar se for NFe e ainda não tiver manifestação conclusiva (null ou apenas Ciência)
                 bool podeManifestar = isNfe && (!doc.CodigoManifestacao.HasValue || doc.CodigoManifestacao == 210210);
+
+                // NOVA REGRA: Aparece só para resumos que ainda não tiveram ciência enviada
+                bool podeEnviarCiencia = doc.TipoDocumento.Equals("Resumo", StringComparison.OrdinalIgnoreCase) && !doc.CienciaEnviada;
 
                 if (!string.IsNullOrWhiteSpace(request.FiltroTexto))
                 {
@@ -83,7 +84,7 @@ namespace CoreDFeMonitor.Application.Features.Documentos.Queries
                     doc.Id, doc.Nsu, numero, doc.ChaveAcesso, doc.TipoDocumento,
                     cnpj, emitente, $"R$ {valor}", situacao, statusManifestacao,
                     doc.DataEmissao, doc.CienciaEnviada, doc.XmlConteudo,
-                    podeManifestar, isNfe
+                    podeManifestar, isNfe, podeEnviarCiencia // <-- PASSE A NOVA FLAG AQUI
                 ));
             }
 
