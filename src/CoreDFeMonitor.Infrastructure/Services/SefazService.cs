@@ -404,5 +404,49 @@ namespace CoreDFeMonitor.Infrastructure.Services
                 return (false, $"Erro: {ex.Message}");
             }
         }
+        public async Task<SefazDistribuicaoResult> BaixarDocumentoPorChaveAsync(Empresa empresa, string chaveAcesso)
+        {
+            var documentosLidos = new List<DocumentoZip>();
+            try
+            {
+                var config = CriarConfiguracaoZeus(empresa);
+                using var servicoNfe = new ServicosNFe(config);
+                string ufArg = ((int)config.cUF).ToString();
+
+                // 1. Garantimos que a chave de acesso seja uma string não-nula
+                string chaveValida = chaveAcesso?.Trim() ?? string.Empty;
+
+                // 2. Usamos o nome de parâmetro correto da Zeus (chNFE) ou passando os posicionais
+                var retorno = servicoNfe.NfeDistDFeInteresse(
+                    ufAutor: ufArg,
+                    documento: empresa.Cnpj,
+                    ultNSU: "0",
+                    nSU: "0",
+                    chNFE: chaveValida
+                );
+
+                if (retorno?.Retorno == null)
+                    return new SefazDistribuicaoResult(false, "0", "SEFAZ não respondeu à consulta de chave.", documentosLidos);
+
+                var ret = retorno.Retorno;
+
+                if (ret.cStat == 138 && ret.loteDistDFeInt != null)
+                {
+                    foreach (var docZip in ret.loteDistDFeInt)
+                    {
+                        var xmlDescompactado = Compressao.Unzip(docZip.XmlNfe);
+                        documentosLidos.Add(new DocumentoZip(docZip.NSU.ToString(), docZip.schema, xmlDescompactado));
+                    }
+                    return new SefazDistribuicaoResult(true, ret.ultNSU.ToString(), "XML obtido com sucesso da SEFAZ!", documentosLidos);
+                }
+
+                return new SefazDistribuicaoResult(false, ret.ultNSU.ToString(), $"SEFAZ [{ret.cStat}]: {ret.xMotivo}", documentosLidos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao baixar XML por chave: {Message}", ex.Message);
+                return new SefazDistribuicaoResult(false, "0", $"Falha local: {ex.Message}", documentosLidos);
+            }
+        }
     }
 }

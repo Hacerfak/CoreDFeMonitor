@@ -2,251 +2,365 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
     xmlns:core="using:CoreDFeMonitor.Core.Entities"
-    xmlns:dto="using:CoreDFeMonitor.Application.Features.Documentos.Dtos"
     xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     x:Class="CoreDFeMonitor.UI.Views.DocumentosView"
     x:DataType="vm:DocumentosViewModel"
-    x:Name="RootControl">
+    x:Name="RootControl"
+    Background="#F8FAFC">
 
-    <Grid ColumnDefinitions="260, 320, *">
+    <Grid>
+        <!-- LAYOUT DE 3 COLUNAS RESPONSIVAS -->
+        <Grid ColumnDefinitions="220, 260, *">
 
-        <!-- ========================================== -->
-        <!-- COLUNA 0: MENU LATERAL                     -->
-        <!-- ========================================== -->
-        <Border Grid.Column="0" Background="#2C3E50" Padding="0,20">
-            <StackPanel Spacing="10">
-                <TextBlock Text="DFe Monitor" Foreground="White" FontSize="24" FontWeight="Bold"
-                    Margin="25,0,20,35" />
-                <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
-                    Padding="25,18" CornerRadius="0" Command="{Binding NavegarDashboardCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="18">
-                        <icons:MaterialIcon Kind="ViewDashboard" Width="22" Height="22"
-                            Foreground="#BDC3C7" />
-                        <TextBlock Text="Visão Geral" VerticalAlignment="Center" FontSize="16" />
-                    </StackPanel>
-                </Button>
-                <Button Background="#34495E" Foreground="White" HorizontalAlignment="Stretch"
-                    Padding="25,18" CornerRadius="0">
-                    <StackPanel Orientation="Horizontal" Spacing="18">
-                        <icons:MaterialIcon Kind="FileDocumentMultiple" Width="22" Height="22"
-                            Foreground="White" />
-                        <TextBlock Text="Documentos" VerticalAlignment="Center" FontSize="16" />
-                    </StackPanel>
-                </Button>
-                <Button Background="Transparent" Foreground="#BDC3C7" HorizontalAlignment="Stretch"
-                    Padding="25,18" CornerRadius="0" Command="{Binding NavegarConfiguracoesCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="18">
-                        <icons:MaterialIcon Kind="Cog" Width="22" Height="22" Foreground="#BDC3C7" />
-                        <TextBlock Text="Configurações" VerticalAlignment="Center" FontSize="16" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <!-- ========================================== -->
-        <!-- COLUNA 1: LISTA DE EMITENTES (MESTRE)      -->
-        <!-- ========================================== -->
-        <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
-            <Grid RowDefinitions="Auto, Auto, *">
-                <StackPanel Grid.Row="0" Margin="20,25" Spacing="5">
-                    <TextBlock Text="Fornecedores" FontSize="22" FontWeight="Bold"
-                        Foreground="#333333" />
-                    <TextBlock Text="Selecione um emitente para filtrar as notas." FontSize="13"
-                        Foreground="Gray" TextWrapping="Wrap" />
-                </StackPanel>
-                <Separator Grid.Row="1" Background="#EEEEEE" Margin="0" />
-                <ListBox Grid.Row="2" ItemsSource="{Binding ListaEmitentes}"
-                    SelectedItem="{Binding EmitenteSelecionado}" Background="Transparent"
-                    BorderThickness="0" Margin="0,10,0,0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate DataType="core:Emitente">
-                            <Border Padding="15,10" CornerRadius="8" Background="Transparent">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding RazaoSocial}" FontWeight="SemiBold"
-                                        FontSize="14" Foreground="#222222"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <icons:MaterialIcon Kind="Domain" Width="16" Height="16"
-                                            Foreground="Gray" />
-                                        <TextBlock Text="{Binding Cnpj}" FontSize="12"
-                                            Foreground="Gray" />
-                                    </StackPanel>
-                                </StackPanel>
+            <!-- COLUNA 0: NAVEGAÇÃO PRINCIPAL -->
+            <Border Grid.Column="0" Background="#0F172A" Padding="12,24">
+                <DockPanel>
+                    <!-- Header App -->
+                    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="12,0,12,32">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Background="#6366F1" CornerRadius="8" Width="28" Height="28">
+                                <icons:MaterialIcon Kind="ShieldCheck" Foreground="White" Width="18"
+                                    Height="18" HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
                             </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-        </Border>
+                            <TextBlock Text="Core DFe" Foreground="White" FontSize="18"
+                                FontWeight="Bold" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="Enterprise Monitor" Foreground="#64748B" FontSize="11"
+                            Margin="36,0,0,0" />
+                    </StackPanel>
 
-        <!-- ========================================== -->
-        <!-- COLUNA 2: DOCUMENTOS E FILTROS (DETALHE)   -->
-        <!-- ========================================== -->
-        <Grid Grid.Column="2" Background="#F5F5F5" RowDefinitions="Auto, Auto, *">
-            <ProgressBar Grid.Row="0" IsIndeterminate="True" Height="4" Foreground="#6200EE"
-                IsVisible="{Binding IsCarregando}" />
+                    <!-- Itens Menu -->
+                    <StackPanel DockPanel.Dock="Top" Spacing="4">
+                        <Button Command="{Binding NavegarDashboardCommand}" Background="Transparent"
+                            HorizontalAlignment="Stretch" Padding="12,10" CornerRadius="8">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <!-- CORREÇÃO 1: ViewDashboard em vez de LayoutDashboard -->
+                                <icons:MaterialIcon Kind="ViewDashboard" Foreground="#94A3B8"
+                                    Width="18" Height="18" />
+                                <TextBlock Text="Visão Geral" Foreground="#94A3B8" FontSize="13"
+                                    FontWeight="Medium" />
+                            </StackPanel>
+                        </Button>
 
-            <Border Grid.Row="1" Background="White" CornerRadius="0,0,12,12" Padding="30,20"
-                BoxShadow="0 4 10 0 #0D000000">
-                <StackPanel Spacing="15">
-                    <TextBlock Text="Repositório de DF-es" FontSize="24" FontWeight="SemiBold"
-                        Foreground="#333333" />
+                        <Border Background="#1E293B" CornerRadius="8" Padding="12,10">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <icons:MaterialIcon Kind="FileText" Foreground="#6366F1" Width="18"
+                                    Height="18" />
+                                <TextBlock Text="Documentos" Foreground="White" FontSize="13"
+                                    FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
 
-                    <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto" Margin="0,10,0,0">
-                        <ComboBox Grid.Column="0" ItemsSource="{Binding ListaEmpresas}"
-                            SelectedItem="{Binding EmpresaSelecionada}" Width="200"
-                            Margin="0,0,15,0" ToolTip.Tip="Empresa Destinatária">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding RazaoSocial}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <DatePicker Grid.Column="1" SelectedDate="{Binding DataInicio}" Width="140"
-                            Margin="0,0,15,0" />
-                        <DatePicker Grid.Column="2" SelectedDate="{Binding DataFim}" Width="140"
-                            Margin="0,0,15,0" />
-
-                        <ComboBox Grid.Column="3" ItemsSource="{Binding ListaTipos}"
-                            SelectedItem="{Binding TipoSelecionado}" Width="130" Margin="0,0,15,0" />
-
-                        <TextBox Grid.Column="4" Text="{Binding FiltroTexto}"
-                            PlaceholderText="Buscar por Chave..." Margin="0,0,15,0"
-                            VerticalAlignment="Center" />
-                        <Button Grid.Column="5" Content="Filtrar"
-                            Command="{Binding CarregarDocumentosCommand}" Background="#6200EE"
-                            Foreground="White" Padding="25,8" CornerRadius="8" FontWeight="Bold" />
-                    </Grid>
-                </StackPanel>
+                        <Button Command="{Binding NavegarConfiguracoesCommand}"
+                            Background="Transparent" HorizontalAlignment="Stretch" Padding="12,10"
+                            CornerRadius="8">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <!-- CORREÇÃO 2: Cog em vez de Sliders -->
+                                <icons:MaterialIcon Kind="Cog" Foreground="#94A3B8" Width="18"
+                                    Height="18" />
+                                <TextBlock Text="Configurações" Foreground="#94A3B8" FontSize="13"
+                                    FontWeight="Medium" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
             </Border>
 
-            <Border Grid.Row="2" Background="White" CornerRadius="12" Padding="20" Margin="30"
-                BoxShadow="0 8 20 0 #1A000000">
-                <Grid RowDefinitions="Auto, *">
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Documentos}"
-                        AutoGenerateColumns="False" IsReadOnly="True"
-                        CanUserResizeColumns="True" CanUserSortColumns="True"
-                        Background="Transparent" RowBackground="Transparent">
+            <!-- COLUNA 1: PAINEL DE FORNECEDORES -->
+            <Border Grid.Column="1" Background="White" BorderBrush="#E2E8F0"
+                BorderThickness="0,0,1,0">
+                <Grid RowDefinitions="Auto, Auto, *">
+                    <!-- CORREÇÃO 3: Usando Margin em vez de Padding no StackPanel -->
+                    <StackPanel Grid.Row="0" Margin="16" Spacing="12">
+                        <TextBlock Text="Emitentes" FontSize="16" FontWeight="Bold"
+                            Foreground="#1E293B" />
+                        <!-- CORREÇÃO 4: Removido o Watermark duplicado/obsoleto -->
+                        <TextBox Text="{Binding BuscaEmitenteTexto}"
+                            PlaceholderText="Buscar fornecedor por nome ou CNPJ..." Height="38"
+                            CornerRadius="8" BorderBrush="#CBD5E1">
+                            <TextBox.InnerRightContent>
+                                <icons:MaterialIcon Kind="Magnify" Foreground="#94A3B8" Width="16"
+                                    Height="16" Margin="0,0,8,0" />
+                            </TextBox.InnerRightContent>
+                        </TextBox>
+                    </StackPanel>
+
+                    <Separator Grid.Row="1" Background="#F1F5F9" Margin="0" />
+
+                    <ListBox Grid.Row="2" ItemsSource="{Binding ListaEmitentesFiltrada}"
+                        SelectedItem="{Binding EmitenteSelecionado}" Background="Transparent"
+                        Margin="8,8,8,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="core:Emitente">
+                                <Border Padding="10,8" CornerRadius="6" Background="Transparent">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding RazaoSocial}" FontSize="12"
+                                            FontWeight="SemiBold" Foreground="#334155"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Cnpj}" FontSize="11"
+                                            Foreground="#94A3B8" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- COLUNA 2: ÁREA DE TRABALHO PRINCIPAL -->
+            <Grid Grid.Column="2" RowDefinitions="Auto, *">
+                <!-- HEADER DA GRID & FILTROS SUPERIORES -->
+                <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0"
+                    BorderThickness="0,0,0,1" Padding="20,16">
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="Repositório de Documentos Fiscal Eletrônicos"
+                                    FontSize="18" FontWeight="Bold" Foreground="#0F172A" />
+                                <TextBlock
+                                    Text="Gerencie notas, resumos e eventos recebidos da SEFAZ"
+                                    FontSize="12" Foreground="#64748B" />
+                            </StackPanel>
+
+                            <Button Grid.Column="1"
+                                Command="{Binding AbrirModalDownloadChaveCommand}"
+                                Background="#6366F1" Foreground="White" CornerRadius="8"
+                                Padding="14,8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:MaterialIcon Kind="Key" Width="16" Height="16" />
+                                    <TextBlock Text="Baixar por Chave" FontSize="12"
+                                        FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Filtros Inline -->
+                        <WrapPanel Grid.Column="0">
+                            <ComboBox ItemsSource="{Binding ListaEmpresas}"
+                                SelectedItem="{Binding EmpresaSelecionada}" Width="200"
+                                Margin="0,0,8,8" CornerRadius="6" BorderBrush="#CBD5E1">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding RazaoSocial}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <DatePicker SelectedDate="{Binding DataInicio}" Width="135"
+                                Margin="0,0,8,8" CornerRadius="6" />
+                            <DatePicker SelectedDate="{Binding DataFim}" Width="135"
+                                Margin="0,0,8,8" CornerRadius="6" />
+                            <ComboBox ItemsSource="{Binding ListaTipos}"
+                                SelectedItem="{Binding TipoSelecionado}" Width="110"
+                                Margin="0,0,8,8" CornerRadius="6" />
+
+                            <TextBox Text="{Binding FiltroTexto}"
+                                PlaceholderText="Chave ou número..." Width="180" Margin="0,0,8,8"
+                                CornerRadius="6" />
+                            <Button Content="Filtrar" Command="{Binding CarregarDocumentosCommand}"
+                                Background="#0F172A" Foreground="White" CornerRadius="6"
+                                Padding="16,8" FontWeight="SemiBold" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- CONTEÚDO DA TABELA & FLOATING BATCH BAR -->
+                <Grid Grid.Row="1" Margin="20">
+                    <DataGrid ItemsSource="{Binding Documentos}" AutoGenerateColumns="False"
+                        IsReadOnly="False" Background="White" BorderThickness="1"
+                        BorderBrush="#E2E8F0" CornerRadius="8" GridLinesVisibility="Horizontal">
                         <DataGrid.Columns>
-
-                            <!-- COLUNAS DE DADOS -->
-                            <DataGridTextColumn Header="Data"
-                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy'}"
-                                Width="100" />
-
-                            <DataGridTemplateColumn Header="Tipo" Width="100">
+                            <!-- Checkbox Batch -->
+                            <DataGridTemplateColumn Width="40">
+                                <DataGridTemplateColumn.Header>
+                                    <CheckBox
+                                        IsChecked="{Binding $parent[UserControl].DataContext.TodosSelecionados, Mode=TwoWay}"
+                                        HorizontalAlignment="Center" />
+                                </DataGridTemplateColumn.Header>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
-                                        <Border Background="#F0F0F0" CornerRadius="4" Padding="6,2"
+                                        <CheckBox IsChecked="{Binding IsSelecionado, Mode=TwoWay}"
+                                            HorizontalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Data"
+                                Binding="{Binding Dados.DataEmissao, StringFormat='dd/MM/yyyy'}"
+                                Width="95" IsReadOnly="True" />
+
+                            <!-- Badge Tipo -->
+                            <DataGridTemplateColumn Header="Tipo" Width="85" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <Border Background="#F1F5F9" CornerRadius="4" Padding="6,2"
                                             HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Dados.SchemaDisplay}"
-                                                FontSize="11" FontWeight="SemiBold"
-                                                Foreground="#6200EE" />
+                                                FontSize="11" FontWeight="Bold" Foreground="#475569" />
                                         </Border>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
                             <DataGridTextColumn Header="Número" Binding="{Binding Dados.Numero}"
-                                Width="90" FontWeight="Bold" />
-                            <DataGridTextColumn Header="Chave de Acesso"
-                                Binding="{Binding Dados.ChaveAcesso}" Width="250" Foreground="Gray"
-                                FontSize="11" />
-                            <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
-                                Width="110" Foreground="#4CAF50" FontWeight="SemiBold" />
-                            <DataGridTextColumn Header="Manifestação / Evento"
-                                Binding="{Binding Dados.StatusManifestacao}" Width="180"
-                                Foreground="#FF9800" FontWeight="SemiBold" />
+                                Width="85" FontWeight="Bold" IsReadOnly="True" />
 
-                            <!-- COLUNA DE AÇÕES INDIVIDUAIS -->
-                            <DataGridTemplateColumn Header="Ações" Width="160">
+                            <!-- Chave com Copiar Rápido -->
+                            <DataGridTemplateColumn Header="Chave de Acesso" Width="230"
+                                IsReadOnly="True">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate DataType="vm:DocumentoItemViewModel">
-                                        <!-- Removemos o IsVisible do StackPanel para podermos
-                                        exibir o botão nos resumos -->
-                                        <StackPanel Orientation="Horizontal" Spacing="8"
-                                            HorizontalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                            VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Dados.ChaveAcesso}"
+                                                FontSize="11" Foreground="#64748B"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <Button Background="Transparent" Padding="2"
+                                                ToolTip.Tip="Copiar Chave"
+                                                Command="{Binding $parent[UserControl].DataContext.CopiarTextoCommand}"
+                                                CommandParameter="{Binding Dados.ChaveAcesso}">
+                                                <icons:MaterialIcon Kind="ContentCopy" Width="14"
+                                                    Height="14" Foreground="#94A3B8" />
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
-                                            <!-- Consultar Sefaz (Aparece SÓ para NFe) -->
-                                            <Button Background="Transparent" Padding="5"
-                                                ToolTip.Tip="Consultar Situação na Sefaz"
+                            <DataGridTextColumn Header="Valor" Binding="{Binding Dados.ValorTotal}"
+                                Width="100" Foreground="#059669" FontWeight="SemiBold"
+                                IsReadOnly="True" />
+
+                            <!-- Status da Manifestação -->
+                            <DataGridTemplateColumn Header="Manifestação / Evento" Width="160"
+                                IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <Border Background="#FEF3C7" CornerRadius="12" Padding="8,3"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Dados.StatusManifestacao}"
+                                                FontSize="11" FontWeight="SemiBold"
+                                                Foreground="#D97706" />
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Ações Individuais Modernas -->
+                            <DataGridTemplateColumn Header="Ações" Width="120" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="vm:DocumentoItemViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                            HorizontalAlignment="Center">
+                                            <Button Background="Transparent" Padding="4"
+                                                ToolTip.Tip="Consultar Status SEFAZ"
                                                 IsVisible="{Binding Dados.IsNFe}"
                                                 Command="{Binding #RootControl.DataContext.ConsultarStatusNFeCommand}"
                                                 CommandParameter="{Binding Dados}">
-                                                <icons:MaterialIcon Kind="Magnify"
-                                                    Foreground="#2196F3" Width="18" Height="18" />
+                                                <icons:MaterialIcon Kind="Search"
+                                                    Foreground="#2563EB" Width="16" Height="16" />
                                             </Button>
 
-                                            <!-- Menu de Manifestações (Aparece SÓ para NFe) -->
-                                            <Button Background="Transparent" Padding="5"
-                                                ToolTip.Tip="Opções de Manifestação"
-                                                IsVisible="{Binding Dados.IsNFe}"
-                                                IsEnabled="{Binding Dados.PodeManifestar}">
-                                                <icons:MaterialIcon Kind="Handshake"
-                                                    Foreground="#FF9800" Width="18" Height="18" />
-                                                <Button.Flyout>
-                                                    <MenuFlyout>
-                                                        <MenuItem Header="Confirmar Operação"
-                                                            Command="{Binding #RootControl.DataContext.ManifestarConfirmacaoCommand}"
-                                                            CommandParameter="{Binding Dados}">
-                                                            <MenuItem.Icon>
-                                                                <icons:MaterialIcon
-                                                                    Kind="ThumbUpOutline"
-                                                                    Foreground="Green" />
-                                                            </MenuItem.Icon>
-                                                        </MenuItem>
-                                                        <MenuItem
-                                                            Header="Desconhecimento da Operação"
-                                                            Command="{Binding #RootControl.DataContext.ManifestarDesconhecimentoCommand}"
-                                                            CommandParameter="{Binding Dados}">
-                                                            <MenuItem.Icon>
-                                                                <icons:MaterialIcon
-                                                                    Kind="HelpCircleOutline"
-                                                                    Foreground="Orange" />
-                                                            </MenuItem.Icon>
-                                                        </MenuItem>
-                                                        <MenuItem Header="Operação Não Realizada"
-                                                            Command="{Binding #RootControl.DataContext.ManifestarNaoRealizadaCommand}"
-                                                            CommandParameter="{Binding Dados}">
-                                                            <MenuItem.Icon>
-                                                                <icons:MaterialIcon Kind="Cancel"
-                                                                    Foreground="Red" />
-                                                            </MenuItem.Icon>
-                                                        </MenuItem>
-                                                    </MenuFlyout>
-                                                </Button.Flyout>
-                                            </Button>
-
-                                            <!-- NOVO: Enviar Ciência Manual (Aparece SÓ para
-                                            Resumos Pendentes) -->
-                                            <Button Background="Transparent" Padding="5"
-                                                ToolTip.Tip="Forçar envio de Ciência"
+                                            <Button Background="Transparent" Padding="4"
+                                                ToolTip.Tip="Forçar Envio de Ciência"
                                                 IsVisible="{Binding Dados.PodeEnviarCiencia}"
                                                 Command="{Binding #RootControl.DataContext.EnviarCienciaManualCommand}"
                                                 CommandParameter="{Binding Dados}">
-                                                <icons:MaterialIcon Kind="SendCheck"
-                                                    Foreground="#4CAF50" Width="18" Height="18" />
+                                                <icons:MaterialIcon Kind="Send" Foreground="#16A34A"
+                                                    Width="16" Height="16" />
                                             </Button>
 
-                                            <!-- Imprimir DANFE (Aparece SÓ para NFe) -->
-                                            <Button Background="Transparent" Padding="5"
+                                            <Button Background="Transparent" Padding="4"
                                                 ToolTip.Tip="Imprimir DANFE"
                                                 IsVisible="{Binding Dados.IsNFe}"
                                                 Command="{Binding #RootControl.DataContext.ImprimirDanfeCommand}"
                                                 CommandParameter="{Binding Dados}">
                                                 <icons:MaterialIcon Kind="Printer"
-                                                    Foreground="#6200EE" Width="18" Height="18" />
+                                                    Foreground="#7C3AED" Width="16" Height="16" />
                                             </Button>
-
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+
+                    <!-- FLOATING ACTION BAR (AÇÕES EM LOTE NO RODAPÉ) -->
+                    <Border VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                        Margin="0,0,0,16" Background="#0F172A" CornerRadius="30" Padding="16,10"
+                        BoxShadow="0 10 25 0 #40000000" IsVisible="{Binding TotalSelecionados}">
+                        <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center">
+                                <Border Background="#6366F1" CornerRadius="12" Width="24"
+                                    Height="24">
+                                    <TextBlock Text="{Binding TotalSelecionados}" Foreground="White"
+                                        FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="item(ns) selecionado(s)" Foreground="White"
+                                    FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <Rectangle Width="1" Height="16" Fill="#334155" />
+
+                            <Button Command="{Binding ManifestarConfirmacaoEmMassaCommand}"
+                                Background="#16A34A" Foreground="White" CornerRadius="20"
+                                Padding="14,6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <icons:MaterialIcon Kind="Check" Width="14" Height="14" />
+                                    <TextBlock Text="Confirmar Operação" FontSize="12"
+                                        FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding CopiarChavesSelecionadasCommand}"
+                                Background="#334155" Foreground="White" CornerRadius="20"
+                                Padding="14,6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <icons:MaterialIcon Kind="ContentCopy" Width="14" Height="14" />
+                                    <TextBlock Text="Copiar Chaves" FontSize="12"
+                                        FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
+
+        <!-- MODAL SOBREPOSTO: DOWNLOAD POR CHAVE -->
+        <Border Grid.ColumnSpan="3" Background="#80000000" ZIndex="300"
+            IsVisible="{Binding MostrarModalChave}">
+            <Border Background="White" CornerRadius="12" Padding="24" Width="460"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 20 25 -5 #20000000">
+                <StackPanel Spacing="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Baixar XML na SEFAZ" FontSize="18" FontWeight="Bold"
+                            Foreground="#0F172A" />
+                        <TextBlock
+                            Text="Informe a chave de acesso de 44 dígitos para realizar o download oficial via DistDFe."
+                            FontSize="12" Foreground="#64748B" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <TextBox Text="{Binding ChaveDownloadInput}"
+                        PlaceholderText="43260890050238000114550010000000001000000000"
+                        MaxLength="44" Height="40" CornerRadius="8" FontSize="12" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Content="Cancelar"
+                            Command="{Binding FecharModalDownloadChaveCommand}"
+                            Background="Transparent" Foreground="#64748B" />
+                        <Button Content="Baixar XML"
+                            Command="{Binding ProcessarDownloadPorChaveCommand}"
+                            Background="#6366F1" Foreground="White" FontWeight="SemiBold"
+                            CornerRadius="8" Padding="16,8" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

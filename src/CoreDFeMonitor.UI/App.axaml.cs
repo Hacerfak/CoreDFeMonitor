@@ -2,6 +2,7 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using CoreDFeMonitor.Application;
+using CoreDFeMonitor.Application.Services;
 using CoreDFeMonitor.Infrastructure;
 using CoreDFeMonitor.Infrastructure.Data;
 using CoreDFeMonitor.UI.ViewModels;
@@ -43,7 +44,8 @@ namespace CoreDFeMonitor.UI
                 services.AddTransient<CadastroEmpresaViewModel>();
                 services.AddSingleton<DashboardViewModel>();
                 services.AddTransient<ConfiguracoesViewModel>();
-                services.AddTransient<DocumentosViewModel>(); // A tela que criamos na etapa anterior!
+                services.AddTransient<DocumentosViewModel>();
+                services.AddSingleton<IToastService, ToastService>();
 
                 var serviceProvider = services.BuildServiceProvider();
 

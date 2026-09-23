@@ -31,5 +31,6 @@ namespace CoreDFeMonitor.Core.Interfaces
         Task<SefazManifestacaoResult> EnviarCienciaOperacaoAsync(Empresa empresa, string chaveAcesso);
         Task<SefazManifestacaoResult> EnviarManifestacaoAsync(Empresa empresa, string chaveAcesso, int codigoEvento, string justificativa = "");
         Task<(bool Sucesso, string RetornoSefaz)> ConsultarStatusNFeAsync(Empresa empresa, string chaveAcesso);
+        Task<SefazDistribuicaoResult> BaixarDocumentoPorChaveAsync(Empresa empresa, string chaveAcesso);
     }
 }

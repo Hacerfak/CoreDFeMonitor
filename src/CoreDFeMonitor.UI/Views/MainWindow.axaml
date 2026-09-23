@@ -2,10 +2,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:CoreDFeMonitor.UI.ViewModels"
     xmlns:views="using:CoreDFeMonitor.UI.Views"
+    xmlns:services="using:CoreDFeMonitor.Application.Services"
+    xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     x:Class="CoreDFeMonitor.UI.Views.MainWindow"
     x:DataType="vm:MainViewModel"
-    Title="Core DFe Monitor"
-    Width="1024" Height="768"
+    Title="Core DF-e Monitor"
+    Width="1280" Height="800"
+    MinWidth="900" MinHeight="600"
     WindowStartupLocation="CenterScreen">
 
     <Window.DataTemplates>
@@ -24,14 +27,50 @@
     </Window.DataTemplates>
 
     <Grid>
+        <!-- TELA ATUAL DA APLICAÇÃO -->
+        <TransitioningContentControl Content="{Binding ViewAtual}" />
+
+        <!-- CARREGAMENTO INICIAL -->
         <Border Background="#F4F6F8" ZIndex="100" IsVisible="{Binding IsCarregandoAplicacao}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="6" Foreground="#673AB7" />
-                <TextBlock Text="Carregando Core DFe Monitor..." FontSize="18" FontWeight="SemiBold"
-                    Foreground="#333333" />
+                <ProgressBar IsIndeterminate="True" Width="220" Height="6" Foreground="#673AB7" />
+                <TextBlock Text="Carregando Core DF-e Monitor..." FontSize="18"
+                    FontWeight="SemiBold" Foreground="#333333" />
             </StackPanel>
         </Border>
 
-        <TransitioningContentControl Content="{Binding ViewAtual}" />
+        <!-- CONTAINER FLUTUANTE DE TOASTERS (CANTO INFERIOR DIREITO) -->
+        <ItemsControl ItemsSource="{Binding Toasts}"
+            ZIndex="200"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="0,0,25,25">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="services:ToastMessage">
+                    <Border CornerRadius="8" Padding="16,12" Margin="0,8,0,0" Width="360"
+                        BoxShadow="0 6 18 0 #33000000" Background="White">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <!-- Ícone por tipo -->
+                            <icons:MaterialIcon Grid.Column="0" Kind="CheckCircle"
+                                Foreground="#4CAF50" Width="24" Height="24" Margin="0,0,12,0"
+                                VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock Text="{Binding Titulo}" FontWeight="Bold" FontSize="14"
+                                    Foreground="#222222" />
+                                <TextBlock Text="{Binding Mensagem}" FontSize="12"
+                                    Foreground="#666666" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Background="Transparent" Padding="4"
+                                VerticalAlignment="Top"
+                                Command="{Binding $parent[Window].DataContext.FecharToastCommand}"
+                                CommandParameter="{Binding Id}">
+                                <icons:MaterialIcon Kind="Close" Foreground="Gray" Width="16"
+                                    Height="16" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </Window>
